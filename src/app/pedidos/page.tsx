@@ -1,0 +1,115 @@
+import { OrderItem } from '@/components/OrderItem'
+import { TopBar } from '@/components/TopBar'
+import { config } from '@/lib/config'
+import {
+  countNew, filterOrders, formatDate, groupByDate, isNew, recordVisit, STATUS_PARAM, statusParam, todayPy,
+  windowText, type StatusParam,
+} from '@/lib/orders'
+import { getResultsWindow, listOrders } from '@/lib/repo'
+import { getDb } from '@/lib/server-state'
+import { first, readVisits, requireClinic, withQuery, type SearchParams } from '@/lib/session'
+
+export const metadata = { title: 'Mis pedidos' }
+
+const FILTERS: { param: StatusParam | null; label: string }[] = [
+  { param: null, label: 'Todos' },
+  { param: 'disponible', label: 'Disponibles' },
+  { param: 'en_proceso', label: 'En proceso' },
+  { param: 'fuera_de_ventana', label: 'No en línea' },
+]
+
+const EMPTY_FILTER: Record<StatusParam, string> = {
+  disponible: 'con resultados disponibles',
+  en_proceso: 'en proceso',
+  fuera_de_ventana: 'fuera de la ventana en línea',
+}
+
+export default async function OrdersPage({ searchParams }: { searchParams: SearchParams }) {
+  const { session, clinic } = await requireClinic()
+  const sp = await searchParams
+  const q = (first(sp.q) ?? '').trim().slice(0, 80)
+  const estado = statusParam(first(sp.estado))
+
+  const db = await getDb()
+  const all = await listOrders(db, clinic.code)
+  const window = await getResultsWindow(db)
+  const { orders, counts } = filterOrders(all, q, estado && STATUS_PARAM[estado])
+  // The proxy stores today's visit; recordVisit is idempotent, so this reads the same day either way.
+  const previous = recordVisit(await readVisits(), clinic.code, todayPy()).previous
+  const newCount = countNew(all, previous)
+  const href = (param: StatusParam | null) => withQuery('/pedidos', { estado: param, q })
+
+  return (
+    <>
+      <TopBar session={session} clinic={clinic} />
+      <main className="contenedor">
+        <div className="pagina-cab">
+          <h1 className="titulo">Tus <strong>pedidos</strong></h1>
+          <div className="pagina-meta">
+            {window.start && window.end && <span>{windowText(window.start, window.end)}</span>}
+            {newCount > 0 && (
+              <span className="pagina-nuevos">
+                <span className="punto punto--marca" />
+                {`${newCount} ${newCount === 1 ? 'pedido nuevo' : 'pedidos nuevos'} desde tu última visita`}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {all.length > 0 && (
+          <>
+            <form method="GET" action="/pedidos" className="buscar" role="search">
+              <label htmlFor="q" className="oculto">Buscar</label>
+              <input id="q" name="q" type="search" defaultValue={q} className="campo"
+                placeholder="Buscar animal, caravana o análisis" />
+              {estado && <input type="hidden" name="estado" value={estado} />}
+              {q && <a className="buscar-limpiar" href="/pedidos" aria-label="Borrar búsqueda">×</a>}
+            </form>
+            <nav className="filtros" aria-label="Filtrar por estado">
+              {FILTERS.map(({ param, label }) => (
+                <a key={label} className="filtro" href={href(param)} aria-current={param === estado ? 'true' : undefined}>
+                  {`${label} `}
+                  <span className="filtro-n">{param ? counts[STATUS_PARAM[param]] : counts.all}</span>
+                </a>
+              ))}
+            </nav>
+          </>
+        )}
+
+        {orders.length > 0 ? (
+          <div className="grupos">
+            {groupByDate(orders).map((g) => (
+              <section className="grupo" key={g.date}>
+                <h2 className="grupo-titulo">{g.title}<span className="grupo-fecha">{formatDate(g.date)}</span></h2>
+                <ul className="pedidos">
+                  {g.orders.map((o) => (
+                    <li key={`${o.receivedOn}/${o.number}`}><OrderItem order={o} isNew={isNew(o, previous)} /></li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        ) : all.length === 0 ? (
+          <div className="vacio">
+            <strong>Todavía no hay pedidos de tu clínica en el portal</strong>
+            <p>
+              Los resultados aparecen acá apenas el laboratorio los carga. ¿Esperabas ver alguno? Llamá
+              al <strong>{config.lab.phone}</strong>.
+            </p>
+          </div>
+        ) : q ? (
+          <div className="vacio">
+            <strong>{`Ningún pedido coincide con “${q}”`}</strong>
+            <p>La búsqueda mira el nombre o la caravana del animal, el análisis y la referencia del pedido.</p>
+            <a className="boton-borde" href="/pedidos">Ver todos los pedidos</a>
+          </div>
+        ) : (
+          <div className="vacio">
+            <strong>{`No hay pedidos ${estado ? EMPTY_FILTER[estado] : ''}`}</strong>
+            <a className="boton-borde" href="/pedidos">Ver todos los pedidos</a>
+          </div>
+        )}
+      </main>
+    </>
+  )
+}

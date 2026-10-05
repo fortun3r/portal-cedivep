@@ -8,6 +8,9 @@
  *  - 260722/219  a herd of 4 cows, with the lab's real print order
  *    (UBICACION interleaves animals per analysis: 804, 806, 808…).
  *  - one order in progress, one cancelled, one outside the online window.
+ *  - 260722/220  a herd of 50 cows (from the design prototype) to see the matrix with volume.
+ *  - 260723/13  a mixed group of 4 animals (clinic 424): no matrix, one section per animal.
+ *  - 260723/30  a key shared by two clinics: both must get 404 (repo.ts UNAMBIGUOUS).
  *  - one phone loaded in two clinics (→ clinic picker).
  *  - the wildcard clinic 1 (private owners), which nobody can log in as.
  *  - rows are inserted UNSORTED: the portal must sort by UBICACION, not trust
@@ -69,6 +72,10 @@ const pedidos: Row[] = [
   P('2026-07-10', 3, 2646),                                                 // outside the window
   P('2026-07-23', 12, 424, { FECHA_ENTR: '2026-07-25' }),
   P('2026-07-24', 9, 1),                                                    // private owner: nobody sees it
+  P('2026-07-22', 220, 2646, { FECHA_ENTR: '2026-07-24' }),                // 50-cow herd
+  P('2026-07-23', 13, 424, { FECHA_ENTR: '2026-07-25' }),                  // mixed group of 4
+  P('2026-07-23', 30, 2646),                                                // same key in two clinics:
+  P('2026-07-23', 30, 424),                                                 // nobody may see it
 ]
 
 // ───────────────────────────────────────────── results
@@ -161,6 +168,72 @@ herd.forEach((tag, i) => {
       base + i * 2, 1, [['N', name, res, '', '', 'S']]))
   }
 })
+
+// 260722/220 — 50 cows, generated exactly like the design prototype's rodeo()
+// (diseno/prototipo/portal-datos.js): 8 findings in 7 animals. The first 4
+// tags and serologies are the same as 260722/219.
+function herdOf50(): [tag: string, hardjo: string, pomona: string, ibr: string, dvb: string][] {
+  let seed = 20260722
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
+  const tags = ['154983', '151667', '126', '105']
+  const used = new Set(tags)
+  while (tags.length < 50) {
+    const c = rnd() < 0.3 ? String(100 + Math.floor(rnd() * 900)) : String(150000 + Math.floor(rnd() * 9000))
+    if (!used.has(c)) { used.add(c); tags.push(c) }
+  }
+  const hardjo: Record<number, string> = { 1: '1/400', 9: '1/200', 17: '1/800', 23: '1/400', 31: '1/100', 38: '1/200' }
+  const pomona: Record<number, string> = { 9: '1/100', 44: '1/400' }
+  const ibr0 = ['79% - POSITIVO', '100% - POSITIVO', '80% - POSITIVO', '12% - Negativo']
+  const dvb0 = ['0,186 - POSITIVO', '1,674 - Negativo', '1,674 - Negativo', '1,674 - Negativo']
+  return tags.map((tag, i) => {
+    const pct = Math.floor(rnd() * 100)
+    const r = rnd()
+    const ibr = ibr0[i] || (pct >= 55 ? `${pct}% - POSITIVO` : `${pct}% - Negativo`)
+    const dvb = dvb0[i] || (r < 0.08 ? `0,${100 + Math.floor(rnd() * 300)} - POSITIVO`
+      : `${(1.2 + rnd() * 0.8).toFixed(3).replace('.', ',')} - Negativo`)
+    return [tag, hardjo[i] ?? '', pomona[i] ?? '', ibr, dvb]
+  })
+}
+herdOf50().forEach(([tag, hardjo, pomona, ibr, dvb], i) => {
+  const order = i + 1
+  const a = cow(tag)
+  descres.push(...rows('2026-07-22', 220, order, a, 55, 'SANGRE', 'OBSERVACION: SGC-PROTEC-M-04 Microaglutinación',
+    4 + i * 16, 2, [
+      ['S', 'LEPTOSPIROSIS', '', '', '', 'S'],
+      ['N', 'Grippotyphosa', 'Negativo', '', 'Negativo', 'S'],
+      ['N', 'Hardjo', hardjo || 'Negativo', '', 'Negativo', hardjo ? 'N' : 'S'],
+      ['N', 'Pomona', pomona || 'Negativo', '', 'Negativo', pomona ? 'N' : 'S'],
+    ]))
+  const serologies: [number, string, string, number][] = [
+    [49, 'INFORME DE BRUCELOSIS', 'Negativo', 804],
+    [53, 'IBR (ELISA)', ibr, 904],
+    [51, 'DVB (ELISA)', dvb, 1004],
+  ]
+  for (const [cod, name, res, base] of serologies) {
+    descres.push(...rows('2026-07-22', 220, order, a, cod, 'SANGRE', 'METODO LABORATORIAL: ELISA',
+      base + i * 2, 1, [['N', name, res, '', '', 'S']]))
+  }
+})
+
+// 260723/13 — four pets with different analyses (clinic 424): herdMatrix is null.
+const pet = (name: string, sex: string, breed: string, species: string): Animal =>
+  ({ ANIMAL: name, SEXOC: sex, RAZA: breed, EDAD: '5.00 Años', ESPECIE: species, PELAJE: 'SIN PELAJE' })
+descres.push(
+  ...rows('2026-07-23', 13, 1, pet('TOBY', 'Macho', 'BEAGLE', 'CANINA'), 2423, 'SANGRE', METHOD_HS, 5, 5, hemogram('18.2', 'S')),
+  ...rows('2026-07-23', 13, 2, pet('LUNA', 'Hembra', 'SIAMES', 'FELINA'), 57, 'SUERO', 'METODO LABORATORIAL: ELISA', 105, 5, [
+    ['S', 'SEROLOGIA', '', '', '', 'S'],
+    ['N', 'Toxoplasma gondii', 'POSITIVO', '', 'Negativo', 'N'],
+  ]),
+  ...rows('2026-07-23', 13, 3, pet('MAX', 'Macho', 'C.M', 'CANINA'), 49, 'SANGRE', '', 205, 5, [
+    ['N', 'INFORME DE BRUCELOSIS', 'Negativo', '', '', 'S'],
+  ]),
+  ...rows('2026-07-23', 13, 4, pet('NALA', 'Hembra', 'C.M', 'CANINA'), 2423, 'SANGRE', METHOD_HS, 305, 5, hemogram('21.0', 'N')),
+)
+
+// 260723/30 — results under a key two clinics share.
+descres.push(...rows('2026-07-23', 30, 1, pet('COMPARTIDO', 'Macho', 'C.M', 'CANINA'), 49, 'SANGRE', '', 5, 5, [
+  ['N', 'INFORME DE BRUCELOSIS', 'Negativo', '', '', 'S'],
+]))
 
 // Shuffle on purpose (deterministically): the portal must sort by itself.
 descres.reverse()

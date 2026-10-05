@@ -132,3 +132,59 @@ test('herd: with fewer than 4 animals, or different tests, there is no matrix', 
   const mixed = [1, 2, 3, 4].map((o) => row({ ORDEN: o, ANIMAL: `A${o}`, NOMRESULTA: o === 4 ? 'Y' : 'X', RESULTADO: '1' }))
   assert.equal(herdMatrix(buildReport(order, mixed)), null)
 })
+
+// ───────────────────────────────────────────── on the demo fixture
+
+import { SEED } from '../src/lib/seed/fixture'
+import { commonProfile, findings, findingsTitle, whatsAppText } from '../src/lib/report'
+
+const table = (t: string) => SEED.find((s) => s.table === t)!.rows
+const fixtureReport = (date: string, nro: number) => buildReport(
+  table('pedidos').find((p) => p.FECHA_RECE === date && p.NRO_RECEPC === nro) as unknown as PedidoRow,
+  table('descres').filter((d) => d.FEC_PED === date && d.NROMOV === nro) as unknown as DescresRow[],
+)
+
+test('findings: one animal lists the test alone', () => {
+  const r = fixtureReport('2026-07-24', 5)
+  assert.deepEqual(findings(r), [{ animal: 'SHAKIRA', name: 'R.D.W.', value: '22,5 %', range: '17,0 - 20,0 %' }])
+  assert.equal(findingsTitle(r), '1 valor fuera de rango')
+})
+
+test('findings: a herd names section · test, and only what the lab flagged (DENTRO=N)', () => {
+  const r = fixtureReport('2026-07-22', 219)
+  // IBR "79% - POSITIVO" comes inside range: it is not a finding.
+  assert.deepEqual(findings(r), [{ animal: '151667', name: 'LEPTOSPIROSIS · Hardjo', value: '1/400', range: 'Negativo' }])
+  assert.equal(findingsTitle(r), '1 valor fuera de rango')
+  assert.deepEqual(findings(fixtureReport('2026-07-23', 12)), [])
+})
+
+test('findings: the 50-cow herd has 8 values out of range in 7 animals', () => {
+  const r = fixtureReport('2026-07-22', 220)
+  assert.equal(r.animals.length, 50)
+  assert.equal(findings(r).length, 8)
+  assert.equal(findingsTitle(r), '8 valores fuera de rango en 7 animales')
+  assert.deepEqual([...new Set(findings(r).map((f) => f.animal))],
+    ['151667', '296', '156921', '154031', '151755', '154313', '201'])
+})
+
+test('common profile: only what every animal shares, never filler values', () => {
+  assert.deepEqual(commonProfile(fixtureReport('2026-07-22', 219)),
+    [['Raza', 'NELORE'], ['Sexo', 'Hembra'], ['Edad', '2.00 Años']])
+  const r = fixtureReport('2026-07-22', 219)
+  r.animals[2] = { ...r.animals[2], age: '3.00 Años' }
+  assert.deepEqual(commonProfile(r).map(([k]) => k), ['Raza', 'Sexo'])
+})
+
+test('the mixed group of 4 has no matrix', () => {
+  assert.equal(herdMatrix(fixtureReport('2026-07-23', 13)), null)
+  assert.ok(herdMatrix(fixtureReport('2026-07-22', 220)))
+})
+
+test('WhatsApp text: reference, animal and analyses, never values', () => {
+  const url = 'https://portal.example/pedidos/2026-07-24/5'
+  assert.equal(whatsAppText(fixtureReport('2026-07-24', 5), url),
+    `Resultados CEDIVEP · Ref. 260724/5 · SHAKIRA (BIOMETRIA HEMATICA)\n${url}`)
+  const herd = whatsAppText(fixtureReport('2026-07-22', 219), url)
+  assert.match(herd, /^Resultados CEDIVEP · Ref\. 260722\/219 · 4 animales \(LEPTOSPIROSIS, INFORME DE BRUCELOSIS, IBR \(ELISA\), DVB \(ELISA\)\)\n/)
+  assert.doesNotMatch(whatsAppText(fixtureReport('2026-07-24', 5), url), /22,5|▲/)
+})
