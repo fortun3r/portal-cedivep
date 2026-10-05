@@ -218,3 +218,21 @@ export function clientIp(headers: Headers): string {
     || '?'
   return ip.trim().replace(/^::ffff:/, '')
 }
+
+// ─────────────────────────────────────────────────── cookies
+
+export const COOKIE = {
+  step: 'cedivep_step',
+  session: 'cedivep_session',
+  visit: 'cedivep_visit',
+  flash: 'cedivep_flash',
+} as const
+
+/** Next's maxAge is in SECONDS (Express used milliseconds). */
+export const cookieOptions = (minutes: number) => ({
+  httpOnly: true,
+  sameSite: 'lax' as const,
+  secure: config.cookieSecure,
+  path: '/',
+  maxAge: Math.max(0, Math.floor(minutes * 60)),
+})
