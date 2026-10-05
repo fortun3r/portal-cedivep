@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e4e2dd;-webkit-font-smoothing:antialiased}
+a{color:#161616}a:hover{color:#c8102e}
+input::placeholder{color:#9a978f}
+input[type=search]::-webkit-search-cancel-button{display:none}
+</style>
+</helmet>
+<div style="padding:40px 48px 64px; display:flex; flex-direction:column; gap:26px; width:max-content; font-family:'Archivo', -apple-system, 'Segoe UI', sans-serif; color:#161616">
+  <header style="display:flex; flex-direction:column; gap:12px; max-width:1630px">
+    <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap">
+      <h1 style="margin:0; font-size:20px; font-weight:400; text-transform:uppercase; letter-spacing:.01em">Portal de resultados — <strong style="font-weight:800">dirección nueva</strong></h1>
+      <span style="font-size:13px; color:#5f5d58; max-width:1100px">Lenguaje de cedivep.com.py: rojo y negro, títulos en mayúscula con dos pesos. Suma filtro por estado, pedidos nuevos desde la última visita, agrupado por fecha, resumen de hallazgos y compartir por WhatsApp. Base fiel: <a href="Portal CEDIVEP.dc.html">referencia</a>.</span>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center">
+      <span style="font-size:12px; color:#5f5d58; margin-right:4px">Ir a</span>
+      <sc-for list="{{ atajos }}" as="a" hint-placeholder-count="12">
+        <sc-if value="{{ a.activo }}"><button onClick="{{ a.ir }}" style="padding:5px 11px; font:inherit; font-size:12px; font-weight:600; border-radius:99px; border:1px solid #161616; background:#161616; color:#fff; cursor:pointer">{{ a.label }}</button></sc-if>
+        <sc-if value="{{ a.inactivo }}"><button onClick="{{ a.ir }}" style="padding:5px 11px; font:inherit; font-size:12px; font-weight:600; border-radius:99px; border:1px solid #c9c6bf; background:#fff; color:#161616; cursor:pointer" style-hover="border-color:#161616">{{ a.label }}</button></sc-if>
+      </sc-for>
+      <span style="font-size:12px; color:#5f5d58; margin-left:10px">Demo: 0981 000 001 · 0981 000 002 (dos clínicas) · código 185186</span>
+    </div>
+  </header>
+
+  <div style="display:flex; gap:40px; align-items:flex-start">
+    <sc-for list="{{ dispositivos }}" as="dev" hint-placeholder-count="2">
+      <div style="display:flex; flex-direction:column; gap:10px">
+        <div style="display:flex; gap:8px; align-items:baseline; font-size:12px; color:#5f5d58"><strong style="color:#161616; font-weight:700">{{ dev.etiqueta }}</strong><span style="font-family:'IBM Plex Mono', monospace">{{ dev.medida }}</span></div>
+        <div style="position:relative; width:{{ dev.ancho }}px; height:{{ dev.alto }}px; border:{{ dev.marcoBorde }}; border-radius:{{ dev.marcoRadio }}; background:#f2f1ee; overflow:hidden; display:flex; flex-direction:column; box-sizing:border-box; box-shadow:0 1px 2px rgba(0,0,0,.06), 0 14px 40px rgba(22,22,22,.16)">
+          <sc-if value="{{ dev.esEscritorio }}">
+            <div style="flex:none; height:38px; display:flex; align-items:center; gap:14px; padding:0 14px; background:#e9e7e3; border-bottom:1px solid #d3d0c9">
+              <span style="display:flex; gap:6px; width:51px"><span style="width:11px; height:11px; border-radius:50%; background:#cfccc5"></span><span style="width:11px; height:11px; border-radius:50%; background:#cfccc5"></span><span style="width:11px; height:11px; border-radius:50%; background:#cfccc5"></span></span>
+              <span style="flex:1; max-width:560px; margin:0 auto; height:24px; display:flex; align-items:center; padding:0 12px; background:#fff; border-radius:6px; font:500 12px 'IBM Plex Mono', monospace; color:#5f5d58; overflow:hidden; white-space:nowrap">{{ ruta }}</span>
+              <span style="width:51px"></span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ dev.esCelular }}">
+            <div style="flex:none; height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; background:{{ dev.barraEstado }}; color:{{ dev.barraEstadoTinta }}; font-size:14px; font-weight:700"><span>9:41</span><span style="width:96px; height:26px; border-radius:14px; background:#000"></span><span style="width:40px"></span></div>
+          </sc-if>
+
+          <div data-scroll="1" style="flex:1; min-height:0; overflow:auto; position:relative; font-size:15px; line-height:1.5">
+
+            <sc-if value="{{ esAcceso }}">
+              <div style="min-height:100%; display:flex; flex-wrap:wrap; align-content:{{ dev.accesoAlinear }}; background:#fff">
+                <aside style="flex:1 1 340px; box-sizing:border-box; background:#161616; color:#fff; padding:{{ dev.panelPad }}; display:flex; flex-direction:column; justify-content:space-between; gap:22px">
+                  <div>
+                    <div style="display:flex; align-items:baseline; gap:6px"><span style="font-size:26px; font-weight:800; letter-spacing:.04em">CEDIVEP</span><span style="font-size:12px; font-weight:700; color:#a9a59c">S.R.L.</span></div>
+                    <div style="width:44px; height:3px; background:#c8102e; margin-top:10px"></div>
+                  </div>
+                  <div>
+                    <div style="font-size:12px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#a9a59c">Portal para clínicas</div>
+                    <h2 style="margin:10px 0 0; font-size:{{ dev.panelTitulo }}; line-height:1.02; font-weight:400; letter-spacing:-.01em; text-transform:uppercase">Resultados de <strong style="font-weight:800">análisis</strong></h2>
+                    <sc-if value="{{ dev.esEscritorio }}"><p style="margin:16px 0 0; color:#b9b6ae; font-size:16px; max-width:380px; text-wrap:pretty">Centro de Diagnóstico Veterinario del Paraguay. Primer laboratorio privado de diagnóstico veterinario del país, desde 1989.</p></sc-if>
+                  </div>
+                  <sc-if value="{{ dev.esEscritorio }}"><div style="font:500 12px/1.5 'IBM Plex Mono', monospace; color:#8b8881">Habilitación N° 114-SENACSA</div></sc-if>
+                </aside>
+                <main style="flex:1.4 1 400px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; padding:{{ dev.formPad }}">
+                  <div style="width:100%; max-width:400px">
+
+                    <sc-if value="{{ es.ingreso }}">
+                      <form onSubmit="{{ ingresar }}" style="display:flex; flex-direction:column">
+                        <h1 style="margin:0; font-size:30px; line-height:1.08; font-weight:400; text-transform:uppercase; letter-spacing:-.005em">Ingresá con tu <strong style="font-weight:800">clínica</strong></h1>
+                        <p style="margin:12px 0 26px; color:#5f5d58; font-size:15px; text-wrap:pretty">Escribí el celular o el correo que tu clínica tiene registrado en el laboratorio. Te mandamos un código de 6 dígitos para entrar, sin contraseña.</p>
+                        <label style="font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px">Celular o correo</label>
+                        <input type="text" value="{{ contacto }}" onChange="{{ onContacto }}" placeholder="0981 123 456" inputMode="email" autoComplete="username" spellCheck="false" autoCapitalize="off" style="height:54px; box-sizing:border-box; padding:0 16px; font:inherit; font-size:18px; border:1.5px solid #d3d0c9; border-radius:4px; background:#fff; color:#161616; outline:none" style-focus="border-color:#161616; box-shadow:0 0 0 3px rgba(22,22,22,.12)">
+                        <sc-if value="{{ hayErrorIngreso }}"><p role="alert" style="margin:12px 0 0; padding:10px 12px; background:#fbe9ec; color:#9e0c24; border-radius:4px; font-size:14px; font-weight:500">{{ errorIngreso }}</p></sc-if>
+                        <button type="submit" style="margin-top:16px; height:54px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; font:inherit; font-size:16px; font-weight:700; color:#fff; background:#c8102e; border:0; border-radius:4px; cursor:pointer" style-hover="background:#a90d27">Recibir código <span aria-hidden="true">→</span></button>
+                        <div style="margin-top:32px; padding-top:18px; border-top:1px solid #e3e1dc; font-size:13px; color:#5f5d58; line-height:1.6">
+                          ¿Tu clínica no tiene un celular o correo registrado? Llamá al <strong style="color:#161616; white-space:nowrap">(021) 584 085</strong> o escribí a <a href="mailto:info.cedivep@cedivep.com.py">info.cedivep@cedivep.com.py</a>.
+                          <div style="color:#8b8881">Lunes a viernes 7:00–18:00 · Sábado 7:00–12:00</div>
+                        </div>
+                      </form>
+                    </sc-if>
+
+                    <sc-if value="{{ es.codigo }}">
+                      <form onSubmit="{{ verificar }}" style="display:flex; flex-direction:column">
+                        <a href="#" onClick="{{ otroContacto }}" style="align-self:flex-start; font-size:13px; font-weight:600; color:#5f5d58; text-decoration:none; margin-bottom:18px">← Usar otro celular o correo</a>
+                        <h1 style="margin:0; font-size:30px; line-height:1.08; font-weight:400; text-transform:uppercase; letter-spacing:-.005em">Ingresá el <strong style="font-weight:800">código</strong></h1>
+                        <p style="margin:12px 0 22px; color:#5f5d58; font-size:15px; text-wrap:pretty">Si <strong style="color:#161616">{{ destino }}</strong> está registrado en el laboratorio, te mandamos un código de 6 dígitos. Vence en 10 minutos.</p>
+                        <sc-if value="{{ mostrarDemo }}"><div role="note" style="margin:0 0 20px; padding:10px 14px; border:1px dashed #c49a1a; background:#fff8dc; border-radius:4px; font-size:13px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 12px"><span>Modo demostración — no se envían mensajes.</span><strong style="font:600 17px 'IBM Plex Mono', monospace; letter-spacing:.14em">{{ codigoDemoTxt }}</strong></div></sc-if>
+                        <label style="font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px">Código</label>
+                        <div style="position:relative; display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:8px">
+                          <sc-for list="{{ digitos }}" as="d" hint-placeholder-count="6">
+                            <sc-if value="{{ d.activo }}"><span style="height:60px; display:flex; align-items:center; justify-content:center; border:1.5px solid #161616; box-shadow:0 0 0 3px rgba(22,22,22,.12); border-radius:4px; background:#fff; font:600 26px 'IBM Plex Mono', monospace">{{ d.d }}</span></sc-if>
+                            <sc-if value="{{ d.inactivo }}"><span style="height:60px; display:flex; align-items:center; justify-content:center; border:1.5px solid #d3d0c9; border-radius:4px; background:#fff; font:600 26px 'IBM Plex Mono', monospace">{{ d.d }}</span></sc-if>
+                          </sc-for>
+                          <input type="text" value="{{ codigo }}" onChange="{{ onCodigo }}" onFocus="{{ onCodigoFoco }}" onBlur="{{ onCodigoBlur }}" inputMode="numeric" autoComplete="one-time-code" maxLength="6" aria-label="Código de 6 dígitos" style="position:absolute; inset:0; width:100%; height:100%; box-sizing:border-box; opacity:0; border:0; padding:0; font-size:16px; cursor:text">
+                        </div>
+                        <sc-if value="{{ hayErrorCodigo }}"><p role="alert" style="margin:12px 0 0; padding:10px 12px; background:#fbe9ec; color:#9e0c24; border-radius:4px; font-size:14px; font-weight:500">{{ errorCodigo }}</p></sc-if>
+                        <button type="submit" style="margin-top:16px; height:54px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; font:inherit; font-size:16px; font-weight:700; color:#fff; background:#c8102e; border:0; border-radius:4px; cursor:pointer" style-hover="background:#a90d27">Entrar <span aria-hidden="true">→</span></button>
+                        <p style="margin:16px 0 0; font-size:14px; color:#5f5d58">¿No te llegó? <a href="#" onClick="{{ reenviar }}" style="font-weight:600">Reenviar código</a></p>
+                      </form>
+                    </sc-if>
+
+                    <sc-if value="{{ es.elegir }}">
+                      <div style="display:flex; flex-direction:column">
+                        <h1 style="margin:0; font-size:30px; line-height:1.08; font-weight:400; text-transform:uppercase; letter-spacing:-.005em">¿Con qué <strong style="font-weight:800">clínica</strong> querés entrar?</h1>
+                        <p style="margin:12px 0 24px; color:#5f5d58; font-size:15px">Tu contacto está registrado en más de una clínica. Podés cambiar después desde la barra.</p>
+                        <div style="display:flex; flex-direction:column; gap:10px">
+                          <sc-for list="{{ opcionesClinicas }}" as="o" hint-placeholder-count="2">
+                            <button onClick="{{ o.elegir }}" style="display:flex; align-items:center; gap:14px; padding:16px 18px; background:#fff; border:1.5px solid #d3d0c9; border-radius:4px; text-align:left; font:inherit; color:#161616; cursor:pointer" style-hover="border-color:#161616">
+                              <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px"><span style="font-size:16px; font-weight:700; letter-spacing:.02em">{{ o.nombre }}</span><span style="font:500 12px 'IBM Plex Mono', monospace; color:#8b8881">{{ o.codTxt }}</span></span>
+                              <span aria-hidden="true" style="color:#c8102e; font-size:20px">→</span>
+                            </button>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+
+                  </div>
+                </main>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ conBarra }}">
+              <header style="position:sticky; top:0; z-index:5; background:#161616; color:#fff; border-bottom:3px solid #c8102e">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; height:56px; padding:{{ dev.barraPad }}">
+                  <a href="#" onClick="{{ irPedidos }}" style="display:flex; align-items:baseline; gap:6px; color:#fff; text-decoration:none"><span style="font-size:19px; font-weight:800; letter-spacing:.04em">CEDIVEP</span><span style="font-size:11px; font-weight:700; color:#a9a59c">S.R.L.</span></a>
+                  <span style="display:flex; align-items:center; gap:16px; min-width:0">
+                    <sc-if value="{{ dev.esEscritorio }}">
+                      <span style="display:flex; align-items:baseline; gap:10px; min-width:0"><span style="font-size:13px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap">{{ clinicaNombre }}</span><span style="font:500 12px 'IBM Plex Mono', monospace; color:#a9a59c">{{ clinicaCod }}</span></span>
+                      <sc-if value="{{ variasClinicas }}"><a href="#" onClick="{{ cambiar }}" style="font-size:13px; font-weight:600; color:#d6d3cc">Cambiar</a></sc-if>
+                    </sc-if>
+                    <button onClick="{{ salir }}" style="height:32px; padding:0 12px; background:none; border:1px solid #55524c; border-radius:4px; color:#fff; font:inherit; font-size:13px; font-weight:600; cursor:pointer" style-hover="border-color:#fff">Salir</button>
+                  </span>
+                </div>
+              </header>
+              <sc-if value="{{ dev.esCelular }}">
+                <div style="display:flex; align-items:center; gap:12px; padding:10px 16px; background:#fff; border-bottom:1px solid #e3e1dc">
+                  <span style="flex:1; min-width:0; display:flex; flex-direction:column"><span style="font-size:13px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">{{ clinicaNombre }}</span><span style="font:500 11px 'IBM Plex Mono', monospace; color:#8b8881">{{ clinicaCod }}</span></span>
+                  <sc-if value="{{ variasClinicas }}"><a href="#" onClick="{{ cambiar }}" style="font-size:13px; font-weight:700; color:#c8102e">Cambiar</a></sc-if>
+                </div>
+              </sc-if>
+            </sc-if>
+
+            <sc-if value="{{ es.pedidos }}">
+              <main style="max-width:920px; margin:0 auto; padding:{{ dev.pagPad }}; box-sizing:border-box">
+                <div style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:10px 24px; margin-bottom:18px">
+                  <h1 style="margin:0; font-size:{{ dev.h1 }}; line-height:1; font-weight:400; text-transform:uppercase">Tus <strong style="font-weight:800">pedidos</strong></h1>
+                  <div style="display:flex; flex-wrap:wrap; gap:4px 16px; font-size:13px; color:#5f5d58">
+                    <span>{{ ventanaTxt }}</span>
+                    <sc-if value="{{ hayNuevos }}"><span style="display:inline-flex; align-items:center; gap:7px; color:#161616; font-weight:600"><span style="width:7px; height:7px; border-radius:50%; background:#c8102e"></span>{{ nuevosTxt }} desde tu última visita</span></sc-if>
+                  </div>
+                </div>
+
+                <sc-if value="{{ tieneTotal }}">
+                  <div style="position:relative; display:flex; align-items:center">
+                    <input type="search" value="{{ qInput }}" onChange="{{ onQVivo }}" placeholder="Buscar animal, caravana o análisis" aria-label="Buscar" style="width:100%; height:50px; box-sizing:border-box; padding:0 48px 0 16px; font:inherit; font-size:16px; border:1.5px solid #d3d0c9; border-radius:4px; background:#fff; color:#161616; outline:none" style-focus="border-color:#161616; box-shadow:0 0 0 3px rgba(22,22,22,.1)">
+                    <sc-if value="{{ hayQ }}"><button onClick="{{ limpiar }}" aria-label="Borrar búsqueda" style="position:absolute; right:8px; width:34px; height:34px; border:0; background:#f2f1ee; border-radius:4px; cursor:pointer; font:inherit; font-size:18px; line-height:1; color:#5f5d58" style-hover="background:#e3e1dc">×</button></sc-if>
+                  </div>
+                  <div style="display:flex; gap:8px; margin:14px 0 24px; overflow-x:auto; padding-bottom:2px">
+                    <sc-for list="{{ filtros }}" as="f" hint-placeholder-count="4">
+                      <sc-if value="{{ f.activo }}"><button onClick="{{ f.elegir }}" style="flex:none; display:inline-flex; align-items:center; gap:8px; height:34px; padding:0 14px; border:1.5px solid #161616; background:#161616; color:#fff; border-radius:99px; font:inherit; font-size:13px; font-weight:600; cursor:pointer">{{ f.label }}<span style="font:500 12px 'IBM Plex Mono', monospace; color:#b9b6ae">{{ f.n }}</span></button></sc-if>
+                      <sc-if value="{{ f.inactivo }}"><button onClick="{{ f.elegir }}" style="flex:none; display:inline-flex; align-items:center; gap:8px; height:34px; padding:0 14px; border:1.5px solid #d3d0c9; background:#fff; color:#161616; border-radius:99px; font:inherit; font-size:13px; font-weight:600; cursor:pointer" style-hover="border-color:#161616">{{ f.label }}<span style="font:500 12px 'IBM Plex Mono', monospace; color:#8b8881">{{ f.n }}</span></button></sc-if>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ hayPedidos }}">
+                  <div style="display:flex; flex-direction:column; gap:26px">
+                    <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="3">
+                      <section style="display:flex; flex-direction:column; gap:10px">
+                        <h2 style="margin:0; display:flex; align-items:center; gap:12px; font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#5f5d58">{{ g.titulo }}<span style="flex:1; height:1px; background:#d3d0c9"></span><span style="font:500 12px 'IBM Plex Mono', monospace; letter-spacing:0; color:#8b8881">{{ g.fecha }}</span></h2>
+                        <div style="display:flex; flex-direction:column; gap:1px; background:#e3e1dc; border:1px solid #e3e1dc; border-radius:6px; overflow:hidden">
+                          <sc-for list="{{ g.pedidos }}" as="p" hint-placeholder-count="2">
+                            <sc-if value="{{ p.esDisponible }}">
+                              <a href="#" onClick="{{ p.abrir }}" style="display:flex; align-items:flex-start; gap:14px; padding:16px 18px; background:#fff; color:#161616; text-decoration:none" style-hover="background:#faf9f7; color:#161616">
+                                <span style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px">
+                                  <span style="display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px">
+                                    <span style="font:600 15px 'IBM Plex Mono', monospace; white-space:pre">{{ p.referencia }}</span>
+                                    <sc-if value="{{ p.nuevo }}"><span style="font-size:10.5px; font-weight:800; letter-spacing:.1em; color:#fff; background:#c8102e; padding:2px 6px; border-radius:3px">NUEVO</span></sc-if>
+                                    <span style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:#1f6e44"><span style="width:7px; height:7px; border-radius:50%; background:#2e9a5f"></span>Resultados disponibles</span>
+                                  </span>
+                                  <span style="margin-top:3px; font-size:16px; font-weight:700; letter-spacing:.01em">{{ p.animalesTxt }}<sc-if value="{{ p.tieneMas }}"><span style="margin-left:6px; font-weight:500; color:#5f5d58">{{ p.masTxt }}</span></sc-if></span>
+                                  <span style="font-size:13.5px; color:#5f5d58">{{ p.analisisTxt }}</span>
+                                  <sc-if value="{{ p.tieneFuera }}"><span style="align-self:flex-start; margin-top:5px; font-size:12.5px; font-weight:700; background:#fde58c; padding:2px 8px; border-radius:3px">▲ {{ p.fueraTxt }}</span></sc-if>
+                                </span>
+                                <span aria-hidden="true" style="flex:none; color:#c8102e; font-size:20px; line-height:1.2">→</span>
+                              </a>
+                            </sc-if>
+                            <sc-if value="{{ p.noDisponible }}">
+                              <div style="display:flex; flex-direction:column; gap:4px; padding:16px 18px; background:#fbfaf8">
+                                <span style="display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px">
+                                  <span style="font:600 15px 'IBM Plex Mono', monospace; white-space:pre; color:#5f5d58">{{ p.referencia }}</span>
+                                  <sc-if value="{{ p.urgente }}"><span style="font-size:10.5px; font-weight:800; letter-spacing:.1em; color:#c8102e; border:1.5px solid #c8102e; padding:1px 6px; border-radius:3px">URGENTE</span></sc-if>
+                                  <sc-if value="{{ p.esProceso }}"><span style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:#2a55a0"><span style="width:7px; height:7px; border-radius:50%; background:#3d6fc4"></span>En proceso</span></sc-if>
+                                  <sc-if value="{{ p.esFueraVentana }}"><span style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:#5f5d58"><span style="width:7px; height:7px; border-radius:50%; background:#a9a59c"></span>No disponible en línea</span></sc-if>
+                                </span>
+                                <sc-if value="{{ p.tieneEntrega }}"><span style="font-size:14px; font-weight:600">{{ p.entregaTxt }}</span></sc-if>
+                                <sc-if value="{{ p.esFueraVentana }}"><span style="font-size:13.5px; color:#5f5d58">Es anterior a los resultados en línea. Pedí el informe al laboratorio.</span></sc-if>
+                              </div>
+                            </sc-if>
+                          </sc-for>
+                        </div>
+                      </section>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ vacioBusqueda }}">
+                  <div style="padding:44px 24px; text-align:center; background:#fff; border:1.5px dashed #d3d0c9; border-radius:6px; display:flex; flex-direction:column; align-items:center; gap:8px">
+                    <strong style="font-size:18px">Ningún pedido coincide con “{{ qTxt }}”</strong>
+                    <span style="font-size:14px; color:#5f5d58; max-width:380px; text-wrap:pretty">La búsqueda mira el nombre o la caravana del animal, el análisis y la referencia del pedido.</span>
+                    <button onClick="{{ limpiar }}" style="margin-top:10px; height:40px; padding:0 16px; background:#fff; border:1.5px solid #161616; border-radius:4px; font:inherit; font-size:14px; font-weight:700; color:#161616; cursor:pointer" style-hover="background:#161616; color:#fff">Ver todos los pedidos</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ vacioFiltro }}">
+                  <div style="padding:44px 24px; text-align:center; background:#fff; border:1.5px dashed #d3d0c9; border-radius:6px; display:flex; flex-direction:column; align-items:center; gap:8px">
+                    <strong style="font-size:18px">No hay pedidos {{ filtroTxt }}</strong>
+                    <button onClick="{{ limpiar }}" style="margin-top:10px; height:40px; padding:0 16px; background:#fff; border:1.5px solid #161616; border-radius:4px; font:inherit; font-size:14px; font-weight:700; color:#161616; cursor:pointer" style-hover="background:#161616; color:#fff">Ver todos los pedidos</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ vacioClinica }}">
+                  <div style="padding:48px 24px; text-align:center; background:#fff; border:1.5px dashed #d3d0c9; border-radius:6px; display:flex; flex-direction:column; align-items:center; gap:8px">
+                    <strong style="font-size:18px">Todavía no hay pedidos de tu clínica en el portal</strong>
+                    <span style="font-size:14px; color:#5f5d58; max-width:400px; text-wrap:pretty">Los resultados aparecen acá apenas el laboratorio los carga. ¿Esperabas ver alguno? Llamá al <strong style="color:#161616; white-space:nowrap">(021) 584 085</strong>.</span>
+                  </div>
+                </sc-if>
+              </main>
+            </sc-if>
+
+            <sc-if value="{{ es.informe }}">
+              <div style="min-height:100%; background:{{ fondoInforme }}; padding-bottom:1px">
+                <sc-if value="{{ noImprimir }}">
+                  <div style="max-width:920px; margin:0 auto; padding:{{ dev.accionesPad }}; box-sizing:border-box; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 16px">
+                    <a href="#" onClick="{{ irPedidos }}" style="font-size:14px; font-weight:700; text-decoration:none">← Tus pedidos</a>
+                    <span style="display:flex; flex-wrap:wrap; gap:8px">
+                      <button onClick="{{ abrirCompartir }}" style="height:38px; padding:0 14px; background:#fff; border:1.5px solid #d3d0c9; border-radius:4px; font:inherit; font-size:14px; font-weight:700; color:#161616; cursor:pointer" style-hover="border-color:#161616">Compartir por WhatsApp</button>
+                      <button onClick="{{ abrirImprimir }}" style="height:38px; padding:0 14px; background:#161616; border:1.5px solid #161616; border-radius:4px; font:inherit; font-size:14px; font-weight:700; color:#fff; cursor:pointer" style-hover="background:#000">Imprimir / PDF</button>
+                    </span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ imprimir }}">
+                  <div style="position:sticky; top:0; z-index:3; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 14px; padding:10px 16px; background:#161616; color:#fff; font-size:13px">
+                    <span><strong style="letter-spacing:.06em; text-transform:uppercase">Vista de impresión</strong> · A4</span>
+                    <span style="display:flex; gap:12px; align-items:center">
+                      <button onClick="{{ imprimirAhora }}" style="height:32px; padding:0 14px; background:#c8102e; border:0; border-radius:4px; font:inherit; font-size:13px; font-weight:700; color:#fff; cursor:pointer">Imprimir</button>
+                      <button onClick="{{ cerrarImprimir }}" style="padding:0; background:none; border:0; font:inherit; font-size:13px; font-weight:600; color:#fff; text-decoration:underline; cursor:pointer">Cerrar</button>
+                    </span>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ hayInforme }}">
+                  <article style="background:#fff; border:1px solid #e3e1dc; border-radius:6px; box-sizing:border-box; margin:{{ dev.docMargen }}; padding:{{ dev.docPad }}; width:{{ dev.docAncho }}; max-width:{{ dev.docMax }}; zoom:{{ dev.docZoom }}">
+                    <header style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-start; gap:14px 24px; padding-bottom:18px; border-bottom:3px solid #c8102e">
+                      <div>
+                        <div style="display:flex; align-items:baseline; gap:6px"><span style="font-size:24px; font-weight:800; letter-spacing:.04em">CEDIVEP</span><span style="font-size:12px; font-weight:700; color:#c8102e">S.R.L.</span></div>
+                        <div style="font-size:12.5px; color:#5f5d58; margin-top:2px">Centro de Diagnóstico Veterinario del Paraguay</div>
+                      </div>
+                      <div style="text-align:{{ dev.selloAlinear }}">
+                        <div style="font-size:10.5px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#5f5d58">Referencia</div>
+                        <div style="font:600 24px/1.15 'IBM Plex Mono', monospace; white-space:pre">{{ inf.referencia }}</div>
+                        <div style="font-size:11.5px; color:#5f5d58; margin-top:2px">Habilitación N° 114-SENACSA</div>
+                      </div>
+                    </header>
+                    <dl style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:14px 24px; margin:20px 0 0">
+                      <div><dt style="font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#5f5d58">Clínica</dt><dd style="margin:2px 0 0; font-size:14.5px; font-weight:700">{{ inf.clinica }}</dd></div>
+                      <div><dt style="font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#5f5d58">Recepción</dt><dd style="margin:2px 0 0; font-size:14.5px; font-weight:700">{{ inf.recepcion }}</dd></div>
+                      <sc-if value="{{ inf.esRodeo }}"><div><dt style="font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#5f5d58">Animales</dt><dd style="margin:2px 0 0; font-size:14.5px; font-weight:700">{{ inf.numAnimales }}</dd></div></sc-if>
+                      <div><dt style="font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#5f5d58">Consultado</dt><dd style="margin:2px 0 0; font-size:14.5px; font-weight:700">{{ inf.consultado }}</dd></div>
+                    </dl>
+
+                    <sc-if value="{{ inf.hayHallazgos }}">
+                      <section style="margin-top:24px; border:1.5px solid #161616; border-radius:4px; overflow:hidden">
+                        <div style="display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:4px 12px; padding:10px 14px; background:#f2f1ee; border-bottom:1px solid #d3d0c9">
+                          <strong style="font-size:12px; letter-spacing:.12em; text-transform:uppercase">Resumen de hallazgos</strong>
+                          <span style="font-size:13px; font-weight:600; color:#5f5d58">{{ inf.hallazgosTitulo }}</span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:1px; background:#eeece8">
+                          <sc-for list="{{ inf.hallazgos }}" as="h" hint-placeholder-count="1">
+                            <div style="display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; padding:9px 14px; background:#fff">
+                              <sc-if value="{{ h.tieneAnimal }}"><span style="font:600 14px 'IBM Plex Mono', monospace; min-width:62px">{{ h.animal }}</span></sc-if>
+                              <span style="flex:1 1 150px; font-size:14px; font-weight:600">{{ h.prueba }}</span>
+                              <span style="font-size:14px; font-weight:800; background:#fde58c; padding:1px 7px; border-radius:3px">▲ {{ h.valor }}</span>
+                              <sc-if value="{{ h.tieneRango }}"><span style="font-size:13px; color:#5f5d58">ref. {{ h.rango }}</span></sc-if>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </section>
+                    </sc-if>
+                    <sc-if value="{{ inf.sinHallazgos }}"><div style="margin-top:24px; display:flex; align-items:center; gap:10px; padding:12px 14px; background:#eaf5ee; border-radius:4px; font-size:14px; font-weight:600; color:#1f5e3b"><span style="width:8px; height:8px; border-radius:50%; background:#2e9a5f"></span>{{ inf.hallazgosTitulo }}</div></sc-if>
+
+                    <sc-if value="{{ inf.esAnimal }}">
+                      <section style="margin-top:26px">
+                        <dl style="display:flex; flex-wrap:wrap; gap:8px; margin:0 0 18px">
+                          <sc-for list="{{ inf.ficha }}" as="f" hint-placeholder-count="5"><div style="display:flex; flex-direction:column; padding:6px 10px; background:#f5f4f1; border-radius:4px"><dt style="font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#5f5d58">{{ f.k }}</dt><dd style="margin:0; font-size:14px; font-weight:700">{{ f.v }}</dd></div></sc-for>
+                        </dl>
+                        <sc-if value="{{ dev.esAncho }}">
+                          <div style="display:flex; padding:0 0 6px; border-bottom:1.5px solid #161616; font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#5f5d58">
+                            <span style="flex:1 1 140px; padding:0 10px">Prueba</span>
+                            <span style="flex:0 0 150px; box-sizing:border-box; padding:0 10px; text-align:right">Resultado</span>
+                            <span style="flex:1 1 240px; padding:0 10px">Rango de referencia</span>
+                          </div>
+                        </sc-if>
+                        <sc-for list="{{ inf.filas }}" as="f" hint-placeholder-count="12">
+                          <sc-if value="{{ f.esSeccion }}"><div style="padding:18px 10px 6px; font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#c8102e">{{ f.prueba }}</div></sc-if>
+                          <sc-if value="{{ f.esMedicion }}">
+                            <div style="display:flex; flex-wrap:wrap; align-items:baseline; padding:7px 0; border-bottom:1px solid #f0eeea">
+                              <span style="flex:1 1 140px; padding:0 10px; font-size:14.5px">{{ f.prueba }}</span>
+                              <span style="flex:0 0 150px; box-sizing:border-box; padding:0 10px; text-align:right; font-size:14.5px; font-variant-numeric:tabular-nums">
+                                <sc-if value="{{ f.fuera }}"><span style="font-weight:800; background:#fde58c; padding:1px 6px; border-radius:3px">▲ {{ f.valor }}</span></sc-if>
+                                <sc-if value="{{ f.normal }}"><span style="font-weight:600">{{ f.valor }}</span></sc-if>
+                                <sc-if value="{{ f.tieneRelativo }}"><span style="display:block; font-size:12.5px; color:#5f5d58">{{ f.relativo }}</span></sc-if>
+                              </span>
+                              <span style="flex:1 1 240px; padding:0 10px; font-size:13px; color:#5f5d58; white-space:pre-line"><sc-if value="{{ dev.noAncho }}"><span style="font-size:10.5px; font-weight:700; letter-spacing:.1em; margin-right:6px">REF.</span></sc-if>{{ f.rango }}</span>
+                            </div>
+                          </sc-if>
+                        </sc-for>
+                        <div style="margin-top:14px; display:flex; flex-direction:column; gap:1px; font-size:12px; color:#5f5d58"><sc-for list="{{ inf.notas }}" as="n" hint-placeholder-count="2"><span>{{ n.t }}</span></sc-for></div>
+                      </section>
+                    </sc-if>
+
+                    <sc-if value="{{ inf.esRodeo }}">
+                      <section style="margin-top:26px">
+                        <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 16px; margin-bottom:12px">
+                          <dl style="display:flex; flex-wrap:wrap; gap:8px; margin:0">
+                            <sc-for list="{{ inf.fichaComun }}" as="f" hint-placeholder-count="3"><div style="display:flex; flex-direction:column; padding:6px 10px; background:#f5f4f1; border-radius:4px"><dt style="font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#5f5d58">{{ f.k }}</dt><dd style="margin:0; font-size:14px; font-weight:700">{{ f.v }}</dd></div></sc-for>
+                          </dl>
+                          <sc-if value="{{ noImprimir }}">
+                            <button onClick="{{ toggleHallazgos }}" role="switch" aria-checked="{{ soloHallazgos }}" style="display:inline-flex; align-items:center; gap:10px; padding:4px 0; background:none; border:0; font:inherit; font-size:13.5px; font-weight:600; color:#161616; cursor:pointer">
+                              <sc-if value="{{ soloHallazgos }}"><span style="position:relative; display:inline-block; width:36px; height:20px; border-radius:99px; background:#161616"><span style="position:absolute; top:2px; left:18px; width:16px; height:16px; border-radius:50%; background:#fff"></span></span></sc-if>
+                              <sc-if value="{{ todosAnimales }}"><span style="position:relative; display:inline-block; width:36px; height:20px; border-radius:99px; background:#d3d0c9"><span style="position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff"></span></span></sc-if>
+                              Solo animales con hallazgos ({{ inf.animalesConHallazgos }})
+                            </button>
+                          </sc-if>
+                        </div>
+                        <div style="overflow-x:auto; border:1px solid #e3e1dc; border-radius:4px">
+                          <div style="min-width:688px; font-size:13px">
+                            <div style="display:flex; background:#f5f4f1; font-size:10.5px; font-weight:800; letter-spacing:.12em; text-transform:uppercase">
+                              <span style="box-sizing:border-box; flex:0 0 80px; position:sticky; left:0; z-index:1; background:#f5f4f1"></span>
+                              <span style="box-sizing:border-box; flex:3 0 264px; padding:8px 10px 0; color:#c8102e">Leptospirosis</span>
+                              <span style="box-sizing:border-box; flex:1 0 88px"></span><span style="box-sizing:border-box; flex:1 0 124px"></span><span style="box-sizing:border-box; flex:1 0 132px"></span>
+                            </div>
+                            <div style="display:flex; align-items:flex-end; background:#f5f4f1; border-bottom:1.5px solid #161616; font-size:12px; font-weight:700">
+                              <span style="box-sizing:border-box; flex:0 0 80px; padding:6px 10px 8px; position:sticky; left:0; z-index:1; background:#f5f4f1; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:#5f5d58">Animal</span>
+                              <span style="box-sizing:border-box; flex:1 0 88px; padding:4px 10px 8px">Grippo­typhosa<span style="display:block; font-size:11px; font-weight:500; color:#5f5d58">ref. Negativo</span></span>
+                              <span style="box-sizing:border-box; flex:1 0 88px; padding:4px 10px 8px">Hardjo<span style="display:block; font-size:11px; font-weight:500; color:#5f5d58">ref. Negativo</span></span>
+                              <span style="box-sizing:border-box; flex:1 0 88px; padding:4px 10px 8px">Pomona<span style="display:block; font-size:11px; font-weight:500; color:#5f5d58">ref. Negativo</span></span>
+                              <span style="box-sizing:border-box; flex:1 0 88px; padding:4px 10px 8px">Brucelosis</span>
+                              <span style="box-sizing:border-box; flex:1 0 124px; padding:4px 10px 8px">IBR (ELISA)</span>
+                              <span style="box-sizing:border-box; flex:1 0 132px; padding:4px 10px 8px">DVB (ELISA)</span>
+                            </div>
+                            <sc-for list="{{ inf.matriz }}" as="r" hint-placeholder-count="10">
+                              <div style="display:flex; border-bottom:1px solid #f0eeea">
+                                <span style="box-sizing:border-box; flex:0 0 80px; padding:6px 10px; position:sticky; left:0; z-index:1; background:#fff; font:600 13px 'IBM Plex Mono', monospace; white-space:nowrap; border-right:1px solid #f0eeea">{{ r.animal }}</span>
+                                <sc-for list="{{ r.celdas }}" as="c" hint-placeholder-count="6">
+                                  <span style="box-sizing:border-box; flex:{{ c.flex }}; padding:6px 10px; font-variant-numeric:tabular-nums; white-space:nowrap">
+                                    <sc-if value="{{ c.fuera }}"><span style="font-weight:800; background:#fde58c; padding:1px 5px; border-radius:3px">▲ {{ c.valor }}</span></sc-if>
+                                    <sc-if value="{{ c.normal }}">{{ c.valor }}</sc-if>
+                                  </span>
+                                </sc-for>
+                              </div>
+                            </sc-for>
+                          </div>
+                        </div>
+                        <div style="margin-top:8px; display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; font-size:12px; color:#5f5d58">
+                          <span>{{ inf.matrizConteo }}</span>
+                          <sc-if value="{{ dev.noAncho }}"><span>Deslizá la tabla para ver todas las pruebas →</span></sc-if>
+                        </div>
+                        <div style="margin-top:14px; display:flex; flex-direction:column; gap:1px; font-size:12px; color:#5f5d58"><sc-for list="{{ inf.notas }}" as="n" hint-placeholder-count="3"><span>{{ n.t }}</span></sc-for></div>
+                      </section>
+                    </sc-if>
+
+                    <sc-if value="{{ inf.hayHallazgos }}"><p style="margin:20px 0 0; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:#5f5d58"><span style="font-weight:800; background:#fde58c; color:#161616; padding:0 6px; border-radius:3px">▲ valor</span>fuera del rango de referencia.</p></sc-if>
+                    <footer style="margin-top:30px; padding-top:12px; border-top:1px solid #e3e1dc; display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 16px; font-size:11.5px; color:#5f5d58">
+                      <span>Consulta en línea de un resultado emitido por CEDIVEP S.R.L. No reemplaza al informe firmado.</span>
+                      <span>(021) 584 085 · info.cedivep@cedivep.com.py</span>
+                    </footer>
+                  </article>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ es.error }}">
+              <main style="max-width:560px; margin:0 auto; padding:{{ dev.errorPad }}; box-sizing:border-box">
+                <h1 style="margin:0; font-size:30px; line-height:1.08; font-weight:400; text-transform:uppercase">No encontramos ese <strong style="font-weight:800">pedido</strong></h1>
+                <p style="margin:14px 0 24px; font-size:15px; color:#5f5d58; text-wrap:pretty">{{ errorMsg }} Si el enlace te lo pasó otra clínica, cada una ve solo sus propios pedidos.</p>
+                <button onClick="{{ irPedidos }}" style="height:50px; display:inline-flex; align-items:center; gap:24px; padding:0 20px; font:inherit; font-size:15px; font-weight:700; color:#fff; background:#c8102e; border:0; border-radius:4px; cursor:pointer" style-hover="background:#a90d27">Ver tus pedidos <span aria-hidden="true">→</span></button>
+              </main>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ compartir }}">
+            <div onClick="{{ cerrarCompartir }}" style="position:absolute; inset:0; z-index:20; background:rgba(22,22,22,.5); display:flex; align-items:{{ dev.hojaAlinear }}; justify-content:center; padding:{{ dev.hojaPad }}">
+              <div onClick="{{ frenar }}" role="dialog" aria-label="Compartir por WhatsApp" style="width:100%; max-width:440px; box-sizing:border-box; background:#fff; border-radius:{{ dev.hojaRadio }}; padding:22px; display:flex; flex-direction:column; gap:14px; box-shadow:0 20px 60px rgba(0,0,0,.28)">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px"><strong style="font-size:18px; font-weight:400; text-transform:uppercase">Compartir por <span style="font-weight:800">WhatsApp</span></strong><button onClick="{{ cerrarCompartir }}" aria-label="Cerrar" style="width:34px; height:34px; border:0; background:#f2f1ee; border-radius:4px; font:inherit; font-size:18px; cursor:pointer">×</button></div>
+                <div style="align-self:flex-end; max-width:92%; padding:10px 12px; background:#e3f3e1; border-radius:8px 8px 2px 8px; font-size:14px; line-height:1.45">{{ inf.mensaje }}<span style="display:block; margin-top:4px; color:#22579e; text-decoration:underline; word-break:break-all">{{ inf.enlace }}</span></div>
+                <p style="margin:0; font-size:13px; color:#5f5d58; text-wrap:pretty">Para verlo hay que ingresar con el celular o el correo de tu clínica. El informe no queda público.</p>
+                <div style="display:flex; flex-wrap:wrap; gap:8px">
+                  <button onClick="{{ abrirWhatsApp }}" style="flex:1 1 160px; height:46px; background:#c8102e; border:0; border-radius:4px; font:inherit; font-size:15px; font-weight:700; color:#fff; cursor:pointer" style-hover="background:#a90d27">Abrir WhatsApp</button>
+                  <button onClick="{{ copiarEnlace }}" style="flex:1 1 120px; height:46px; background:#fff; border:1.5px solid #d3d0c9; border-radius:4px; font:inherit; font-size:15px; font-weight:700; color:#161616; cursor:pointer" style-hover="border-color:#161616">Copiar enlace</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ hayToast }}"><div role="status" style="position:absolute; left:50%; bottom:24px; z-index:30; transform:translateX(-50%); max-width:86%; padding:11px 16px; background:#161616; color:#fff; border-radius:4px; border-left:0; font-size:13px; font-weight:600; box-shadow:0 6px 20px rgba(0,0,0,.25); text-align:center">{{ toast }}</div></sc-if>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { listo: false };
+  componentDidMount() {
+    import(new URL('portal-datos.js', document.baseURI).href)
+      .then((m) => { this.m = m; this.setState({ ...m.estadoInicial(), listo: true }); })
+      .catch((e) => console.error('No se pudo cargar portal-datos.js', e));
+  }
+  componentDidUpdate(_, p) {
+    const s = this.state;
+    if (p.pantalla !== s.pantalla || p.pedido !== s.pedido || p.imprimir !== s.imprimir || p.clinica !== s.clinica)
+      document.querySelectorAll('[data-scroll]').forEach((el) => { el.scrollTop = 0; });
+  }
+  renderVals() {
+    if (!this.m) return {};
+    const v = this.m.vistas(this);
+    const imp = v.imprimir;
+    v.esAcceso = v.es.ingreso || v.es.codigo || v.es.elegir;
+    v.conBarra = (v.es.pedidos || v.es.error || v.es.informe) && !imp;
+    v.fondoInforme = imp ? '#d6d3cc' : 'transparent';
+    v.frenar = (e) => e.stopPropagation();
+    v.dispositivos = v.dispositivos.map((d) => ({
+      ...d,
+      noAncho: !d.esAncho,
+      marcoBorde: d.esCelular ? '10px solid #0e0e0e' : '1px solid #c9c6bf',
+      marcoRadio: d.esCelular ? '46px' : '10px',
+      barraEstado: v.esAcceso || v.conBarra ? '#161616' : '#fff',
+      barraEstadoTinta: v.esAcceso || v.conBarra ? '#fff' : '#161616',
+      accesoAlinear: d.esEscritorio ? 'stretch' : 'flex-start',
+      panelPad: d.esEscritorio ? '48px 52px' : '22px 22px 26px',
+      panelTitulo: d.esEscritorio ? '56px' : '30px',
+      formPad: d.esEscritorio ? '48px' : '28px 22px 40px',
+      barraPad: d.esEscritorio ? '0 32px' : '0 16px',
+      pagPad: d.esEscritorio ? '36px 32px 64px' : '22px 16px 40px',
+      h1: d.esEscritorio ? '40px' : '30px',
+      accionesPad: d.esEscritorio ? '20px 32px 0' : '14px 16px 0',
+      docPad: d.esAncho ? '44px 48px' : '22px 18px',
+      docMargen: imp ? '24px auto 40px' : d.esEscritorio ? '16px auto 48px' : '12px 10px 32px',
+      docAncho: imp ? '794px' : 'auto',
+      docMax: imp ? 'none' : '856px',
+      selloAlinear: d.esAncho ? 'right' : 'left',
+      errorPad: d.esEscritorio ? '96px 32px' : '44px 20px',
+      hojaAlinear: d.esEscritorio ? 'center' : 'flex-end',
+      hojaPad: d.esEscritorio ? '24px' : '0',
+      hojaRadio: d.esEscritorio ? '8px' : '16px 16px 0 0',
+    }));
+    return v;
+  }
+}
+</script>
+</body>
+</html>
