@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  asVisits, countNew, filterOrders, formatDate, groupByDate, isNew, longDate, matchesQuery, recordVisit,
+  asVisits, countNew, filterOrders, formatDate, groupByDate, isNew, longDate, matchesQuery, pageOf, recordVisit,
   statusParam, todayPy, windowText,
 } from '../src/lib/orders'
 import type { OrderSummary } from '../src/lib/types'
@@ -79,6 +79,17 @@ test('unknown ?estado= values mean "all"', () => {
   for (const v of ['xyz', '', '__proto__', 'constructor', 'toString', 'DISPONIBLE', undefined, ['disponible']]) {
     assert.equal(statusParam(v), null, String(v))
   }
+})
+
+test('?pagina= picks a page of 50, clamped to the pages that exist; anything else is the first', () => {
+  const items = Array.from({ length: 120 }, (_, i) => i)
+  assert.deepEqual(pageOf(items, undefined), { items: items.slice(0, 50), page: 1, pages: 3, from: 1 })
+  assert.deepEqual(pageOf(items, '3'), { items: items.slice(100), page: 3, pages: 3, from: 101 })
+  assert.equal(pageOf(items, '99').page, 3)
+  for (const v of ['0', '-1', '2.5', '1e2', 'abc', '', ' 2', '__proto__', '12345', ['2'], 2]) {
+    assert.equal(pageOf(items, v).page, 1, String(v))
+  }
+  assert.deepEqual(pageOf([], '2'), { items: [], page: 1, pages: 1, from: 1 })
 })
 
 test('new since the last visit: available and received after the previous visit day', () => {

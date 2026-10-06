@@ -78,6 +78,18 @@ function signForTest(data: object, minutes: number): string {
   return `${body}.${createHmac('sha256', SECRET).update(body).digest('base64url')}`
 }
 
+/** Order references in list order, spaces removed ('260724/  5' → '260724/5'). */
+const refs = (html: string) => elements(html, 'span', 'ref').map((r) => text(r).replace(/\s+/g, ''))
+
+/** Filter chips → their counts: { Todos: 6, Disponibles: 4, … }. */
+const filters = (html: string) => Object.fromEntries(elements(html, 'a', 'filtro')
+  .map((a) => [text(a).replace(/\s*\d+$/, ''), Number(/(\d+)$/.exec(text(a))![1])]))
+
+/** References of the orders marked NUEVO. */
+const news = (html: string) => elements(html, 'a', 'pedido')
+  .filter((a) => /class="etiqueta-nuevo"/.test(a))
+  .map((a) => text(elements(a, 'span', 'ref')[0]).replace(/\s+/g, ''))
+
 const payload = (cookie: string) => JSON.parse(Buffer.from(cookie.split('.')[0], 'base64url').toString())
 
 /** A minimal browser: keeps cookies and doesn't follow redirects by itself. */
@@ -281,6 +293,8 @@ describe('a phone shared by several clinics', () => {
     const list = await b.go('/pedidos')
     assert.match(text(list.html), /VETERINARIA SAN ROQUE/)
     assert.equal(elements(list.html, 'a', 'barra-cambiar').length, 1)
+    // Its oldest listed day has results: the list's date bound must keep that day.
+    assert.deepEqual(filters(list.html), { Todos: 2, Disponibles: 2, 'En proceso': 0, 'No en línea': 0 })
   })
 
   test('a report without findings says everything is within range', async () => {
@@ -400,9 +414,6 @@ describe('list and report', () => {
     await b.login('0981 000 001')
   })
 
-  const refs = (html: string) => elements(html, 'span', 'ref').map((r) => text(r).replace(/\s+/g, ''))
-  const filters = (html: string) => Object.fromEntries(elements(html, 'a', 'filtro')
-    .map((a) => [text(a).replace(/\s*\d+$/, ''), Number(/(\d+)$/.exec(text(a))![1])]))
   const activeFilter = (html: string) =>
     [...visible(html).matchAll(/<a\b[^>]*class="filtro"[^>]*aria-current="true"[^>]*>([\s\S]*?)<\/a>/g)].map((m) => text(m[1]))
 
@@ -429,6 +440,11 @@ describe('list and report', () => {
       ['Martes 28 de julio 28/07/2026', 'Viernes 24 de julio 24/07/2026', 'Miércoles 22 de julio 22/07/2026',
         'Viernes 10 de julio 10/07/2026'])
     assert.deepEqual(refs(html), ['260728/40', '260724/5', '260724/2', '260722/220', '260722/219', '260710/3'])
+    assert.deepEqual(elements(html, 'nav', 'paginas'), [])
+    assert.doesNotMatch(text(html), /Se muestran los/)
+    const missing = text((await b.go('/pedidos?q=zzz')).html)
+    assert.match(missing, /Ningún pedido coincide/)
+    assert.doesNotMatch(missing, /Solo se buscan/)
   })
 
   test('searching a tag finds the herd', async () => {
@@ -550,7 +566,7 @@ describe('list and report', () => {
       assert.match(cc, /\bprivate\b/, p)
       assert.match(cc, /\bno-store\b/, p)
     }
-    for (const p of ['/pedidos', '/pedidos?estado=disponible', '/pedidos/2026-07-24/5',
+    for (const p of ['/pedidos', '/pedidos?estado=disponible', '/pedidos?pagina=2', '/pedidos/2026-07-24/5',
       '/pedidos/2026-07-22/219?hallazgos=1', '/elegir', '/pedidos/2026-07-23/12']) {
       isPrivate((await b.go(p)).headers, p)
     }
@@ -674,10 +690,6 @@ describe('resend code', () => {
 describe('new since your last visit', () => {
   ownServer()
 
-  const news = (html: string) => elements(html, 'a', 'pedido')
-    .filter((a) => /class="etiqueta-nuevo"/.test(a))
-    .map((a) => text(elements(a, 'span', 'ref')[0]).replace(/\s+/g, ''))
-
   let session = ''
   before(async () => {
     const b = new Browser()
@@ -704,6 +716,7 @@ describe('new since your last visit', () => {
       const { html } = await b.go(path)
       assert.deepEqual(news(html), ['260724/5', '260724/2'], path)
       assert.match(text(elements(html, 'div', 'pagina-meta').join('')), /2 pedidos nuevos desde tu última visita/)
+      assert.match(visible(html), /<a\b[^>]*class="pagina-nuevos"[^>]*href="\/pedidos\?estado=disponible"|<a\b[^>]*href="\/pedidos\?estado=disponible"[^>]*class="pagina-nuevos"/)
     }
   })
 
@@ -715,6 +728,112 @@ describe('new since your last visit', () => {
     const r = await b.go('/pedidos')
     assert.deepEqual(news(r.html), [])
     assert.ok(r.headers.getSetCookie().some((c) => c.startsWith('cedivep_visit=')))
+  })
+})
+
+// ───────────────────────────────────────────── paging
+
+describe('paging a long list', () => {
+  ownServer()
+
+  // Clinic 3100 (fixture): 501 orders, 18 a day from 07-28 down to 07-01, numbered 2000 down to 1500.
+  let b: Browser
+  before(async () => {
+    b = new Browser()
+    await b.login('0981 000 004')
+  })
+
+  const pager = (html: string) => text(elements(html, 'nav', 'paginas').join(''))
+  /** href of the pager link with that rel, decoded, or null. */
+  const relHref = (html: string, rel: 'prev' | 'next') => {
+    const tag = new RegExp(`<a\\b[^>]*\\brel="${rel}"[^>]*>`).exec(visible(html))?.[0]
+    return tag ? /href="([^"]*)"/.exec(tag)![1].replace(/&amp;/g, '&') : null
+  }
+  const params = (href: string | null) => Object.fromEntries(new URL(href!, base).searchParams)
+  const CAP = /Se muestran los 500 pedidos más recientes/
+
+  test('the first page: 50 orders, counts of the whole list, a link to the next page', async () => {
+    const { html } = await b.go('/pedidos')
+    const r = refs(html)
+    assert.equal(r.length, 50)
+    assert.equal(r[0], '260728/2000')
+    assert.equal(r[49], '260726/1951')
+    assert.deepEqual(filters(html), { Todos: 500, Disponibles: 5, 'En proceso': 121, 'No en línea': 374 })
+    assert.match(pager(html), /1–50 de 500/)
+    assert.equal(relHref(html, 'prev'), null)
+    assert.equal(relHref(html, 'next'), '/pedidos?pagina=2')
+    assert.doesNotMatch(text(html), CAP)
+  })
+
+  test('the second page follows the first and links both ways', async () => {
+    const first = refs((await b.go('/pedidos')).html)
+    const { html } = await b.go('/pedidos?pagina=2')
+    const r = refs(html)
+    assert.equal(r.length, 50)
+    assert.equal(r[0], '260726/1950')
+    assert.ok(r.every((x) => !first.includes(x)))
+    for (const n of [1928, 1927, 1926, 1925, 1924]) assert.ok(r.includes(`260724/${n}`), String(n))
+    assert.match(pager(html), /51–100 de 500/)
+    assert.equal(relHref(html, 'prev'), '/pedidos')
+    assert.equal(relHref(html, 'next'), '/pedidos?pagina=3')
+  })
+
+  test('the last page says the list stops at the 500 newest; past the end shows the last page', async () => {
+    const { html } = await b.go('/pedidos?pagina=10')
+    assert.equal(refs(html).at(-1), '260701/1501')
+    assert.equal(relHref(html, 'next'), null)
+    assert.match(text(html), CAP)
+    assert.deepEqual(refs((await b.go('/pedidos?pagina=999')).html), refs(html))
+    const missing = text((await b.go('/pedidos?q=260701/1500')).html)
+    assert.match(missing, /Ningún pedido coincide/)
+    assert.match(missing, /Solo se buscan los 500 pedidos más recientes/)
+  })
+
+  test('a bad ?pagina= shows the first page', async () => {
+    const first = refs((await b.go('/pedidos')).html)
+    for (const v of ['abc', '0', '-1', '2.5', '__proto__', '%20%202']) {
+      assert.deepEqual(refs((await b.go(`/pedidos?pagina=${v}`)).html), first, v)
+    }
+  })
+
+  test('search covers the whole list, not just the page on screen', async () => {
+    const { html } = await b.go('/pedidos?q=T1926')
+    assert.deepEqual(refs(html), ['260724/1926'])
+    assert.deepEqual(elements(html, 'nav', 'paginas'), [])
+    assert.doesNotMatch(text(html), CAP)
+  })
+
+  test('search + filter + page: the pager keeps both; chips, search and × go back to page 1', async () => {
+    const { html } = await b.go('/pedidos?q=07/2026&estado=fuera_de_ventana&pagina=2')
+    assert.match(pager(html), /51–100 de 374/)
+    assert.equal(refs(html)[0], '260719/1824')
+    assert.deepEqual(params(relHref(html, 'prev')), { estado: 'fuera_de_ventana', q: '07/2026' })
+    assert.deepEqual(params(relHref(html, 'next')), { estado: 'fuera_de_ventana', q: '07/2026', pagina: '3' })
+    const hrefs = [...visible(html).matchAll(/<a\b[^>]*class="(?:filtro|buscar-limpiar)"[^>]*href="([^"]+)"/g)].map((m) => m[1])
+    assert.equal(hrefs.length, 5)
+    for (const h of hrefs) assert.doesNotMatch(h, /pagina/)
+    assert.doesNotMatch(elements(html, 'form', 'buscar').join(''), /name="pagina"/)
+
+    const last = (await b.go('/pedidos?q=07/2026&estado=fuera_de_ventana&pagina=8')).html
+    assert.match(pager(last), /351–374 de 374/)
+    assert.equal(refs(last).length, 24)
+    assert.equal(relHref(last, 'next'), null)
+    for (const narrowed of [last, (await b.go('/pedidos?estado=disponible')).html]) {
+      assert.doesNotMatch(text(narrowed), CAP)   // the note is for the whole list only
+    }
+  })
+
+  test('NUEVO: the header counts the whole list on every page and links to the available ones', async () => {
+    const v = new Browser()
+    v.cookies.set('cedivep_session', b.cookies.get('cedivep_session')!)
+    v.cookies.set('cedivep_visit', signForTest({ visits: { 3100: ['', '2026-07-23'] } }, 60))
+    const page1 = (await v.go('/pedidos')).html
+    const page2 = (await v.go('/pedidos?pagina=2')).html
+    for (const html of [page1, page2]) {
+      assert.match(text(elements(html, 'div', 'pagina-meta').join('')), /5 pedidos nuevos desde tu última visita/)
+    }
+    assert.deepEqual(news(page1), [])
+    assert.deepEqual(news(page2), ['260724/1928', '260724/1927', '260724/1926', '260724/1925', '260724/1924'])
   })
 })
 

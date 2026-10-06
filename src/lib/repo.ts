@@ -58,7 +58,17 @@ export async function getResultsWindow(db: Db): Promise<ResultsWindow> {
 
 // ───────────────────────────────────────────── orders and reports
 
-export async function listOrders(db: Db, clinic: number, limit = 500): Promise<OrderSummary[]> {
+/** How many of a clinic's newest orders the list loads, searches and counts. */
+export const MAX_LISTED = 500
+
+/**
+ * ponytail: bounded in-memory set; ceiling = MAX_LISTED newest orders, searched,
+ * counted and paged in TS (the page renders 50). Once sql/indices.sql runs, move
+ * to SQL keyset pages: LIMIT 51 headers, descres by those keys, counts via
+ * LEFT JOIN (SELECT DISTINCT FEC_PED, NROMOV …) h. Never a correlated EXISTS on
+ * descres: 14-16 s without indexes.
+ */
+export async function listOrders(db: Db, clinic: number, limit = MAX_LISTED): Promise<OrderSummary[]> {
   const orders = await db.all<PedidoRow>(
     `SELECT ${ORDER_COLS} FROM pedidos p
       WHERE p.CLINICA = ? AND ${CURRENT} AND ${UNAMBIGUOUS}
@@ -68,12 +78,14 @@ export async function listOrders(db: Db, clinic: number, limit = 500): Promise<O
   )
   if (!orders.length) return []
 
+  // Only the listed orders' dates: without this, results for the clinic's whole history.
+  const oldest = String(orders[orders.length - 1].FECHA_RECE).slice(0, 10)
   const rows = await db.all<DescresRow>(
     `SELECT d.FEC_PED, d.NROMOV, d.ANIMAL, d.NOMANAL, d.NOMRESULTA, d.TITULO,
             d.DENTRO, d.RESULTADO, d.ORDEN, d.CODANAL, d.UBICACION
        FROM descres d JOIN pedidos p ON ${JOIN}
-      WHERE p.CLINICA = ? AND ${CURRENT} AND ${UNAMBIGUOUS}`,
-    [clinic],
+      WHERE p.CLINICA = ? AND ${CURRENT} AND ${UNAMBIGUOUS} AND p.FECHA_RECE >= ?`,
+    [clinic, oldest],
   )
   const { start } = await getResultsWindow(db)
   return summarizeOrders(orders, rows, start)

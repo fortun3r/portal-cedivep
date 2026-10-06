@@ -20,7 +20,7 @@ demo and tests · Node runtime everywhere (never Edge) · own CSS (`src/app/glob
 - `npm test`: unit tests (Node test runner + tsx).
 - `npm run test:e2e`: `next build`, then the end-to-end suite against `next start` (one server per describe).
 - `npm run lint` · `npx tsc --noEmit`
-- Demo login: phone `0981 000 001`. The code shows on screen in demo mode. `0981 000 002` belongs to two clinics.
+- Demo login: phone `0981 000 001`. The code shows on screen in demo mode. `0981 000 002` belongs to two clinics. `0981 000 004` has 501 orders (paging).
 
 ## Rules that never break
 

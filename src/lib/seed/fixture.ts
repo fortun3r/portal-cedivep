@@ -11,6 +11,7 @@
  *  - 260722/220  a herd of 50 cows (from the design prototype) to see the matrix with volume.
  *  - 260723/13  a mixed group of 4 animals (clinic 424): no matrix, one section per animal.
  *  - 260723/30  a key shared by two clinics: both must get 404 (repo.ts UNAMBIGUOUS).
+ *  - clinic 3100 (0981 000 004): 501 orders, one over repo.ts MAX_LISTED, for paging.
  *  - one phone loaded in two clinics (→ clinic picker).
  *  - the wildcard clinic 1 (private owners), which nobody can log in as.
  *  - rows are inserted UNSORTED: the portal must sort by UBICACION, not trust
@@ -48,6 +49,8 @@ const clini_vet: Row[] = [
     CORREO: '', HABILITA: 'S', MOROSO: 'S' },
   { CODIGO: 900, NOMBRE: 'CLÍNICA DADA DE BAJA', TELEFONO: '0981 000 009',
     CORREO: '', HABILITA: 'N', MOROSO: 'N' },
+  { CODIGO: 3100, NOMBRE: 'VETERINARIA ÑANDUTÍ', TELEFONO: '0981 000 004',
+    CORREO: '', HABILITA: 'S', MOROSO: 'N' },
 ]
 
 // ───────────────────────────────────────────── orders
@@ -234,6 +237,20 @@ descres.push(
 descres.push(...rows('2026-07-23', 30, 1, pet('COMPARTIDO', 'Macho', 'C.M', 'CANINA'), 49, 'SANGRE', '', 5, 5, [
   ['N', 'INFORME DE BRUCELOSIS', 'Negativo', '', '', 'S'],
 ]))
+
+// Clinic 3100: 18 orders a day from 07-28 back to 07-01, numbered down so the list
+// order is generation order (260728/2000 first, 260701/1500 the one over the cap).
+// The five on 07-24 at list positions 73-77 (page 2) have results.
+for (let i = 0; i <= 500; i++) {
+  const date = `2026-07-${String(28 - Math.floor(i / 18)).padStart(2, '0')}`
+  const nro = 2000 - i
+  pedidos.push(P(date, nro, 3100))
+  if (i >= 72 && i <= 76) {
+    descres.push(...rows(date, nro, 1, cow(`T${nro}`), 49, 'SANGRE', '', 5, 5, [
+      ['N', 'INFORME DE BRUCELOSIS', 'Negativo', '', '', 'S'],
+    ]))
+  }
+}
 
 // Shuffle on purpose (deterministically): the portal must sort by itself.
 descres.reverse()

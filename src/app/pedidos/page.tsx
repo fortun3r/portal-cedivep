@@ -2,10 +2,10 @@ import { OrderItem } from '@/components/OrderItem'
 import { TopBar } from '@/components/TopBar'
 import { config } from '@/lib/config'
 import {
-  countNew, filterOrders, formatDate, groupByDate, isNew, recordVisit, STATUS_PARAM, statusParam, todayPy,
+  countNew, filterOrders, formatDate, groupByDate, isNew, pageOf, recordVisit, STATUS_PARAM, statusParam, todayPy,
   windowText, type StatusParam,
 } from '@/lib/orders'
-import { getResultsWindow, listOrders } from '@/lib/repo'
+import { getResultsWindow, listOrders, MAX_LISTED } from '@/lib/repo'
 import { getDb } from '@/lib/server-state'
 import { first, readVisits, requireClinic, withQuery, type SearchParams } from '@/lib/session'
 
@@ -34,10 +34,14 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
   const all = await listOrders(db, clinic.code)
   const window = await getResultsWindow(db)
   const { orders, counts } = filterOrders(all, q, estado && STATUS_PARAM[estado])
+  const shown = pageOf(orders, first(sp.pagina))
+  // Exactly MAX_LISTED orders also shows the notes; still true.
+  const capped = all.length >= MAX_LISTED
   // The proxy stores today's visit; recordVisit is idempotent, so this reads the same day either way.
   const previous = recordVisit(await readVisits(), clinic.code, todayPy()).previous
   const newCount = countNew(all, previous)
   const href = (param: StatusParam | null) => withQuery('/pedidos', { estado: param, q })
+  const pageHref = (n: number) => withQuery('/pedidos', { estado, q, pagina: n > 1 ? String(n) : null })
 
   return (
     <>
@@ -48,10 +52,10 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
           <div className="pagina-meta">
             {window.start && window.end && <span>{windowText(window.start, window.end)}</span>}
             {newCount > 0 && (
-              <span className="pagina-nuevos">
+              <a className="pagina-nuevos" href="/pedidos?estado=disponible">
                 <span className="punto punto--marca" />
                 {`${newCount} ${newCount === 1 ? 'pedido nuevo' : 'pedidos nuevos'} desde tu última visita`}
-              </span>
+              </a>
             )}
           </div>
         </div>
@@ -78,7 +82,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
 
         {orders.length > 0 ? (
           <div className="grupos">
-            {groupByDate(orders).map((g) => (
+            {groupByDate(shown.items).map((g) => (
               <section className="grupo" key={g.date}>
                 <h2 className="grupo-titulo">{g.title}<span className="grupo-fecha">{formatDate(g.date)}</span></h2>
                 <ul className="pedidos">
@@ -88,6 +92,26 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
                 </ul>
               </section>
             ))}
+            {shown.pages > 1 && (
+              <nav className="paginas no-print" aria-label="Páginas">
+                {shown.page > 1 && (
+                  <a className="boton-borde" rel="prev" href={pageHref(shown.page - 1)}>
+                    <span aria-hidden="true">←</span>Más recientes
+                  </a>
+                )}
+                <span>{`${shown.from}–${shown.from + shown.items.length - 1} de ${orders.length}`}</span>
+                {shown.page < shown.pages && (
+                  <a className="boton-borde" rel="next" href={pageHref(shown.page + 1)}>
+                    Más antiguos<span aria-hidden="true">→</span>
+                  </a>
+                )}
+              </nav>
+            )}
+            {capped && !q && !estado && shown.page === shown.pages && (
+              <p className="secundario">
+                {`Se muestran los ${MAX_LISTED} pedidos más recientes. Si buscás uno anterior, llamá al ${config.lab.phone}.`}
+              </p>
+            )}
           </div>
         ) : all.length === 0 ? (
           <div className="vacio">
@@ -101,6 +125,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
           <div className="vacio">
             <strong>{`Ningún pedido coincide con “${q}”`}</strong>
             <p>La búsqueda mira el nombre o la caravana del animal, el análisis y la referencia del pedido.</p>
+            {capped && <p>{`Solo se buscan los ${MAX_LISTED} pedidos más recientes.`}</p>}
             <a className="boton-borde" href="/pedidos">Ver todos los pedidos</a>
           </div>
         ) : (

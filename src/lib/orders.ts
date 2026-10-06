@@ -80,6 +80,16 @@ export function statusParam(v: unknown): StatusParam | null {
   return typeof v === 'string' && Object.hasOwn(STATUS_PARAM, v) ? (v as StatusParam) : null
 }
 
+export const PAGE_SIZE = 50
+
+/** `?pagina=` → that page of the list, clamped to the pages that exist; anything else → the first. */
+export function pageOf<T>(items: T[], param: unknown, size = PAGE_SIZE) {
+  const pages = Math.max(1, Math.ceil(items.length / size))
+  const asked = typeof param === 'string' && /^\d{1,4}$/.test(param) ? Number(param) : 1
+  const page = Math.min(pages, Math.max(1, asked))
+  return { items: items.slice((page - 1) * size, page * size), page, pages, from: (page - 1) * size + 1 }
+}
+
 export type StatusCounts = Record<OrderStatus | 'all', number>
 
 /** Search, then filter by status. Counts are taken after the search, before the filter. */
