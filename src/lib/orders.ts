@@ -105,11 +105,10 @@ export function recordVisit(visits: Visits, clinic: number, today: string): { vi
   const key = String(clinic)
   const [previous, last] = visits[key] ?? ['', '']
   const entry: [string, string] = last === today ? [previous, last] : [last, today]
-  const next: Visits = { ...visits }
-  delete next[key]
-  next[key] = entry
-  const keys = Object.keys(next)
-  for (const k of keys.slice(0, Math.max(0, keys.length - MAX_CLINICS_IN_VISITS))) delete next[k]
+  const next: Visits = { ...visits, [key]: entry }
+  // Drop the clinics visited longest ago. Not by key order: integer-like keys always enumerate ascending.
+  const others = Object.keys(next).filter((k) => k !== key).sort((x, y) => next[x][1].localeCompare(next[y][1]))
+  for (const k of others.slice(0, Math.max(0, others.length + 1 - MAX_CLINICS_IN_VISITS))) delete next[k]
   return { visits: next, previous: entry[0] || null }
 }
 

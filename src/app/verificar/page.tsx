@@ -4,7 +4,7 @@ import { CodeInput } from '@/components/CodeInput'
 import { config } from '@/lib/config'
 import { visibleDestination } from '@/lib/contact'
 import { errorMessage } from '@/lib/messages'
-import { first, readStep, type SearchParams } from '@/lib/session'
+import { first, readStep, volverQuery, type SearchParams } from '@/lib/session'
 
 export const metadata = { title: 'Código de ingreso' }
 
@@ -15,7 +15,7 @@ export default async function VerifyPage({ searchParams }: { searchParams: Searc
   return (
     <AccessShell>
       <div className="acceso-form">
-        <a className="acceso-volver" href="/">← Usar otro celular o correo</a>
+        <a className="acceso-volver" href={`/${volverQuery(step.returnTo)}`}>← Usar otro celular o correo</a>
         <h1 className="titulo">Ingresá el <strong>código</strong></h1>
         <p className="ayuda">
           Si <strong>{visibleDestination(step.key)}</strong> está registrado en el laboratorio, te mandamos un

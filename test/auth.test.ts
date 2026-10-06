@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { asSession, asStep, LoginCodes, readSigned, safeReturnPath, sign } from '../src/lib/auth'
+import { mock, test } from 'node:test'
+import { asSession, asStep, clientIp, LoginCodes, readSigned, safeReturnPath, sign } from '../src/lib/auth'
 import { errorMessage } from '../src/lib/messages'
 
 const tacuary = [{ code: 2646, name: 'CLÍNICA TACUARY' }]
@@ -74,4 +74,41 @@ test('signed cookies: tampering, expiry and shape', () => {
 test('error messages: known ?error= codes only', () => {
   assert.match(errorMessage('limite')!, /demasiados códigos/)
   for (const v of ['__proto__', 'toString', 'constructor', 'x', undefined]) assert.equal(errorMessage(v), undefined)
+})
+
+test('a contact gets at most 10 codes a day, even spread over the day', () => {
+  mock.timers.enable({ apis: ['Date'], now: Date.parse('2026-10-05T12:00:00Z') })
+  try {
+    const codes = new LoginCodes()
+    const results: (string | null)[] = []
+    for (let window = 0; window < 4; window++) {
+      for (let i = 0; i < 3; i++) {
+        const r = codes.admit('tel:981000001', `10.0.${window}.${i}`)
+        results.push(r && !r.ok ? r.reason : null)
+      }
+      mock.timers.tick(16 * 60_000)
+    }
+    assert.deepEqual(results.filter((r) => r === null).length, 10)
+    assert.equal(results.at(-1), 'limit_daily')
+  } finally {
+    mock.timers.reset()
+  }
+})
+
+test('pending codes are capped; a contact that already has one can still get a new one', () => {
+  const codes = new LoginCodes()
+  for (let i = 0; i < 20_000; i++) assert.ok(codes.issue(`tel:9${String(i).padStart(8, '0')}`, []).ok)
+  assert.deepEqual(codes.issue('tel:981999999', []), { ok: false, reason: 'capacity' })
+  assert.ok(codes.issue('tel:900000000', []).ok)
+})
+
+test('client IP: IPv6 is keyed by its /64, IPv4 as is', () => {
+  const ip = (xff: string) => clientIp(new Headers({ 'x-forwarded-for': xff }))
+  assert.equal(ip('2001:db8::1'), ip('2001:DB8:0:0:ffff::2'))
+  assert.equal(ip('2001:db8::1'), '2001:db8:0:0::/64')
+  assert.notEqual(ip('2001:db8:0:1::1'), ip('2001:db8::1'))
+  assert.equal(ip('190.128.1.2'), '190.128.1.2')
+  assert.equal(ip('::ffff:127.0.0.1'), '127.0.0.1')
+  assert.equal(ip('spoofed, 190.128.1.2'), '190.128.1.2')     // the rightmost entry
+  assert.doesNotThrow(() => ip('1:2:3:4:5:6:7:8:9::1'))         // malformed, must not crash
 })

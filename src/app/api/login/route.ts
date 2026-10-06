@@ -28,12 +28,12 @@ export async function POST(request: NextRequest) {
     key = step.key
     returnTo = step.returnTo ?? null
   } else {
-    typed = field(form, 'contact').slice(0, 200)
+    typed = Array.from(field(form, 'contact')).slice(0, 200).join('')  // whole code points: a cookie can't hold half an emoji
     returnTo = safeReturnPath(field(form, 'returnTo'))
     key = contactKey(typed)
   }
 
-  const failure = (error: 'formato' | 'limite') => {
+  const failure = (error: 'formato' | 'limite' | 'inesperado') => {
     if (resend) return seeOther(withQuery('/verificar', { error }))
     const res = seeOther(withQuery('/', { error, volver: returnTo }))
     res.cookies.set(COOKIE.flash, typed, cookieOptions(FLASH_MINUTES))
@@ -49,7 +49,14 @@ export async function POST(request: NextRequest) {
     return failure('limite')
   }
 
-  const { clinics, reason } = await (await getDirectory()).lookup(key)
+  let lookup
+  try {
+    lookup = await (await getDirectory()).lookup(key)
+  } catch (e) {
+    console.error('[login] clinic directory unavailable', e)
+    return failure('inesperado')
+  }
+  const { clinics, reason } = lookup
   const issued = codes.issue(key, clinics)
   if (!issued.ok) {
     console.warn(`[login] limit ${issued.reason} ${maskContact(key)} ip=${ip}`)

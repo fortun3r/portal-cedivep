@@ -7,6 +7,7 @@ const BY_CODE = {
   limite: 'Pediste demasiados códigos. Esperá unos minutos y probá de nuevo.',
   incorrecto: 'El código no es correcto. Revisalo y probá de nuevo.',
   vencido: 'El código venció o ya no es válido. Pedí uno nuevo.',
+  inesperado: 'Ocurrió un error inesperado. Intentá de nuevo.',
 } as const
 
 /** `?error=` values; Spanish because they show in the address bar. */

@@ -32,19 +32,19 @@ async function freePort(): Promise<number> {
 }
 
 /** A fresh `next start` for the current describe. */
-function ownServer() {
+function ownServer(extraEnv: Record<string, string> = {}) {
   let child: ChildProcess
   before(async () => {
     const port = await freePort()
     base = `http://127.0.0.1:${port}`
     child = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', String(port), '-H', '127.0.0.1'],
-      { env: { ...process.env, ...ENV }, stdio: ['ignore', 'pipe', 'pipe'] })
+      { env: { ...process.env, ...ENV, ...extraEnv }, stdio: ['ignore', 'pipe', 'pipe'] })
     let output = ''
     child.stdout!.on('data', (d) => { output += d })
     child.stderr!.on('data', (d) => { output += d })
     for (let i = 0; i < 150; i++) {
       try {
-        if ((await fetch(`${base}/health`)).ok) return
+        if ((await fetch(`${base}/health`)).status) return   // up (a DB that is down still answers)
       } catch { /* not up yet */ }
       await new Promise((r) => setTimeout(r, 200))
     }
@@ -138,6 +138,10 @@ describe('login', () => {
     const r2 = await b.go('/api/verify', { code: code! })
     assert.equal(r2.status, 303)
     assert.equal(r2.location, '/pedidos')
+    const cookie = r2.headers.getSetCookie().find((c) => c.startsWith('cedivep_session='))!
+    assert.match(cookie, /Max-Age=43200(;|$)/)    // 12 h in SECONDS
+    assert.match(cookie, /HttpOnly/i)
+    assert.match(cookie, /SameSite=lax/i)
     const r3 = await b.go('/pedidos')
     assert.equal(r3.status, 200)
     assert.match(text(r3.html), /CLÍNICA TACUARY/)
@@ -292,6 +296,7 @@ describe('a phone shared by several clinics', () => {
     assert.deepEqual(elements(html, 'h2', 'animal-titulo').map((h) => text(h).split(' ')[0]), ['TOBY', 'LUNA', 'MAX', 'NALA'])
     assert.equal(elements(html, 'table', 'matriz').length, 0)
     assert.equal(elements(html, 'table', 'resultados').length, 4)
+    assert.doesNotMatch(visible(html), /<td class="rango"><span class="rango-etiqueta">REF\.<\/span><\/td>/)
   })
 
   test('an order key shared by two clinics is shown to neither', async () => {
@@ -589,6 +594,13 @@ describe('back to the report after logging in (?volver=)', () => {
     assert.match(text((await b.go(r.location!)).html), /SHAKIRA/)
   })
 
+  test('"Usar otro celular o correo" keeps it too', async () => {
+    const b = new Browser()
+    await b.go('/api/login', { contact: '0985 999 111', returnTo: '/pedidos/2026-07-24/5' })
+    assert.match(visible((await b.go('/verificar')).html),
+      /class="acceso-volver" href="\/\?volver=%2Fpedidos%2F2026-07-24%2F5"/)
+  })
+
   test('it survives a typo in the contact', async () => {
     const r = await new Browser().go('/api/login', { contact: 'hola', returnTo: '/pedidos/2026-07-24/5' })
     assert.equal(r.location, `/?error=formato&${volver('/pedidos/2026-07-24/5').slice(1)}`)
@@ -703,5 +715,57 @@ describe('new since your last visit', () => {
     const r = await b.go('/pedidos')
     assert.deepEqual(news(r.html), [])
     assert.ok(r.headers.getSetCookie().some((c) => c.startsWith('cedivep_visit=')))
+  })
+})
+
+// ───────────────────────────────────────────── startup and failures
+
+describe('/health', () => {
+  ownServer()
+
+  test('reports driver, counts and window, never where the DB lives', async () => {
+    const r = await fetch(`${base}/health`)
+    assert.match(r.headers.get('cache-control') ?? '', /no-store/)
+    const body = await r.json()
+    assert.deepEqual(Object.keys(body).sort(), ['counts', 'demo', 'driver', 'ok', 'window'])
+    assert.equal(body.driver, 'sqlite')
+  })
+})
+
+/** Runs `next start` with a config and resolves with its exit code, or 'running' after a few seconds. */
+async function startWith(env: Record<string, string>): Promise<number | 'running'> {
+  const port = await freePort()
+  const child = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', String(port), '-H', '127.0.0.1'],
+    { env: { ...process.env, ...ENV, ...env }, stdio: 'ignore' })
+  const exited = once(child, 'exit').then(([code]) => code as number)
+  const result = await Promise.race([exited, new Promise<'running'>((r) => setTimeout(() => r('running'), 8000))])
+  if (result === 'running') { child.kill('SIGTERM'); await exited }
+  return result
+}
+
+describe('startup refuses configs that would expose real data', () => {
+  const mysql = { CEDIVEP_DRIVER: 'mysql', DB_HOST: '127.0.0.1', DB_PORT: '1', DB_USER: 'nobody', COOKIE_SECURE: 'true',
+    CEDIVEP_DEMO: '0' }
+
+  test('demo mode with the real database', async () => {
+    const code = await startWith({ ...mysql, CEDIVEP_DEMO: '1' })
+    assert.notEqual(code, 'running')
+    assert.notEqual(code, 0)
+  })
+
+  test('a short SESSION_SECRET with the real database', async () => {
+    const code = await startWith({ ...mysql, SESSION_SECRET: 'too-short' })
+    assert.notEqual(code, 'running')
+    assert.notEqual(code, 0)
+  })
+})
+
+describe('database down', () => {
+  ownServer({ CEDIVEP_DRIVER: 'mysql', DB_HOST: '127.0.0.1', DB_PORT: '1', DB_USER: 'nobody', COOKIE_SECURE: 'true',
+    CEDIVEP_DEMO: '0' })
+
+  test('login answers with the friendly error, not a blank 500', async () => {
+    const r = await new Browser().go('/api/login', { contact: '0981 000 001' })
+    assert.equal(r.location, '/?error=inesperado')
   })
 })

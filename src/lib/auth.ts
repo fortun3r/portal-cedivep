@@ -209,14 +209,20 @@ export function safeReturnPath(v: unknown): string | null {
 }
 
 /**
- * The client IP for rate limiting.
+ * The client IP for rate limiting. IPv6 is keyed by its /64: one host usually
+ * owns a whole /64, and per-address keys would give it unlimited budgets.
  * ponytail: spoofable unless Next listens on 127.0.0.1 behind cloudflared (TRUST_PROXY); the per-contact limits are the real control.
  */
 export function clientIp(headers: Headers): string {
-  const ip = (config.trustProxy && headers.get('cf-connecting-ip'))
+  const ip = ((config.trustProxy && headers.get('cf-connecting-ip'))
     || headers.get('x-forwarded-for')?.split(',').at(-1)
-    || '?'
-  return ip.trim().replace(/^::ffff:/, '')
+    || '?').trim().replace(/^::ffff:/, '')
+  if (!ip.includes(':')) return ip
+  const [head, tail = ''] = ip.split('::')
+  const a = head ? head.split(':') : []
+  const b = tail ? tail.split(':') : []
+  const full = [...a, ...Array(Math.max(0, 8 - a.length - b.length)).fill('0'), ...b]
+  return `${full.slice(0, 4).map((h) => h.toLowerCase().replace(/^0+(?=.)/, '')).join(':')}::/64`
 }
 
 // ─────────────────────────────────────────────────── cookies

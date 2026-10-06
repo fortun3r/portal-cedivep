@@ -17,6 +17,12 @@ export function CodeInput() {
       <input
         id="code" name="code" className="codigo-input" type="text" required autoFocus
         inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]{6,7}" maxLength={7} placeholder="000000"
+        // Digits typed (or autofilled) before hydration are already in the DOM.
+        ref={(el) => {
+          if (!el) return
+          setDigits(el.value.replace(/\D/g, '').slice(0, 6))
+          setFocused(document.activeElement === el)
+        }}
         onInput={(e) => setDigits(e.currentTarget.value.replace(/\D/g, '').slice(0, 6))}
         onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
       />

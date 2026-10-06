@@ -64,7 +64,7 @@ export function ResultsTable({ animal }: { animal: AnimalReport }) {
             {l.outOfRange ? marked(main) : main}
             {l.relative && <span className="relativo">{l.relative}</span>}
           </td>
-          <td className="rango"><span className="rango-etiqueta">REF.</span>{l.range}</td>
+          <td className="rango">{l.range && <span className="rango-etiqueta">REF.</span>}{l.range}</td>
         </tr>,
       )
     })

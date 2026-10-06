@@ -102,10 +102,20 @@ test('recordVisit: first visit marks nothing; the badge stays for the day and mo
   assert.equal(recordVisit(nextDay.visits, 424, '2026-07-24').previous, null)
 })
 
-test('recordVisit keeps at most 10 clinics, dropping the oldest', () => {
+test('recordVisit keeps at most 10 clinics, dropping the one visited longest ago (not the lowest code)', () => {
   let visits = {}
-  for (let c = 1; c <= 12; c++) visits = recordVisit(visits, c, '2026-07-24').visits
-  assert.deepEqual(Object.keys(visits), ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12'])
+  // Codes descending, dates ascending: key order and visit order disagree.
+  for (let i = 0; i < 12; i++) visits = recordVisit(visits, 1000 - i * 10, `2026-07-${String(10 + i).padStart(2, '0')}`).visits
+  const kept = Object.keys(visits)
+  assert.equal(kept.length, 10)
+  assert.ok(!kept.includes('1000') && !kept.includes('990'), 'the two oldest visits are gone')
+  assert.ok(kept.includes('890'), 'the newest is kept')
+  // Revisiting a clinic keeps it, and the next new one evicts the oldest of the rest.
+  visits = recordVisit(visits, 980, '2026-07-30').visits
+  visits = recordVisit(visits, 50, '2026-07-31').visits
+  assert.ok(Object.keys(visits).includes('980'))
+  assert.ok(Object.keys(visits).includes('50'))
+  assert.ok(!Object.keys(visits).includes('970'))
 })
 
 test('a visit cookie with an unexpected shape reads as no visits', () => {

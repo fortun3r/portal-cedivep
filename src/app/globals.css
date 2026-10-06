@@ -358,7 +358,15 @@ table.matriz thead th:first-child { font-size: 10.5px; letter-spacing: .12em; te
 .indice a.con-alerta { background: var(--resaltado); border-radius: 3px; padding: 0 4px; }
 .animal-titulo { margin: 0 0 12px; display: flex; align-items: center; gap: 10px; font: 600 17px var(--f-mono); }
 .animal-titulo .marcador { font: 700 12.5px var(--f-texto); }
+.animal { scroll-margin-top: 72px; }   /* index jumps land below the sticky bar */
 /* The phone number inside an empty-state paragraph keeps the paragraph size. */
 .vacio p strong { font-size: inherit; }
 /* Decorative arrows: not read out by screen readers (older browsers keep the plain value). */
 .boton::after, .clinica-opcion::after, a.pedido::after { content: "→"; content: "→" / ""; }
+@media print {
+  /* A one-animal hemogram fits on one A4 with its footer. */
+  table.resultados td { padding-top: 5px; padding-bottom: 5px; }
+  .pie-informe { margin-top: 18px; }
+  /* A herd's matrix is longer than a page anyway: let it start right after the summary. */
+  .animal:has(.matriz) { break-inside: auto; }
+}
